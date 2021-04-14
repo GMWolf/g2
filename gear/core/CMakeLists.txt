@@ -1,1 +1,0 @@
-add_library(g2_core)

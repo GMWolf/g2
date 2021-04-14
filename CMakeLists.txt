@@ -6,3 +6,5 @@ set(CMAKE_CXX_STANDARD 20)
 add_subdirectory(thirdparty)
 
 add_subdirectory(gear)
+
+add_subdirectory(examples)
