@@ -3,7 +3,7 @@
 //
 
 #include <g2/application.h>
-
+#include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -72,10 +72,24 @@ namespace g2
         glfwPollEvents();
     }
 
+    VkSurfaceKHR Application::createSurface(VkInstance instance) {
+        VkSurfaceKHR surface{};
+        VkResult result = glfwCreateWindowSurface(instance, pImpl->window, nullptr, &surface);
+        return surface;
+    }
+
+    glm::ivec2 Application::getWindowSize()
+    {
+        int width, height;
+        glfwGetWindowSize(pImpl->window, &width, &height);
+        return glm::ivec2(width, height);
+    }
+
     std::span<const char *> getVkExtensions()
     {
         uint32_t count;
         const char** str = glfwGetRequiredInstanceExtensions(&count);
         return {str, count};
     }
+
 }

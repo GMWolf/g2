@@ -15,12 +15,11 @@ int main()
         .title = "Application"
     };
 
-
-
     auto app = g2::Application(appConfig);
 
     g2::gfx::InstanceConfig gfxConfig
     {
+        .application = &app,
         .vkExtensions = g2::getVkExtensions(),
     };
 

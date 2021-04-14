@@ -7,10 +7,13 @@
 #include <memory>
 #include <span>
 
+#include <g2/application.h>
+
 namespace g2::gfx
 {
     struct InstanceConfig
     {
+        Application* application;
         std::span<const char*> vkExtensions;
     };
 

@@ -6,7 +6,9 @@
 
 #include "vk.h"
 #include "validation.h"
-#include "physical_device.h"
+#include "device.h"
+#include "swapchain.h"
+#include <glm/glm.hpp>
 
 namespace g2::gfx
 {
@@ -14,6 +16,13 @@ namespace g2::gfx
     {
         vk::Instance vkInstance;
         vk::PhysicalDevice physicalDevice;
+        vk::Device vkDevice;
+        vk::Queue graphicsQueue;
+        vk::Queue presentQueue;
+
+        SwapChain swapChain;
+
+        vk::SurfaceKHR surface;
     };
 
     Instance::Instance(const InstanceConfig& config)
@@ -54,21 +63,43 @@ namespace g2::gfx
 
         pImpl->vkInstance = instance;
 
-        auto [enumerateResult, layers] = vk::enumerateInstanceExtensionProperties();
+        pImpl->surface = config.application->createSurface(pImpl->vkInstance);
 
-        auto physicalDeviceResult = pickPhysicalDevice(instance);
-        if (!physicalDeviceResult.has_value())
+        auto physicalDeviceResult = pickPhysicalDevice(instance, pImpl->surface);
+        if (!physicalDeviceResult)
         {
             return;
         }
 
         pImpl->physicalDevice = physicalDeviceResult.value();
 
+        auto deviceResult = createDevice(pImpl->physicalDevice, pImpl->surface);
+        if (!deviceResult)
+        {
+            return;
+        }
+        pImpl->vkDevice = deviceResult.value().first;
+        QueueFamilyIndices queueFamilyIndices = deviceResult.value().second;
+
+        pImpl->graphicsQueue = pImpl->vkDevice.getQueue(queueFamilyIndices.graphics.value(), 0);
+        pImpl->presentQueue = pImpl->vkDevice.getQueue(queueFamilyIndices.present.value(), 0);
+
+        glm::ivec2 appSize = config.application->getWindowSize();
+        vk::Extent2D appExtent{static_cast<uint32_t>(appSize.x), static_cast<uint32_t>(appSize.y)};
+
+        auto swapChain = createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface, appExtent, queueFamilyIndices);
+        if (!swapChain.has_value())
+        {
+            return;
+        }
+
+        pImpl->swapChain = swapChain.value();
     }
 
     Instance::~Instance()
     {
-
+        pImpl->vkDevice.destroy();
+        pImpl->vkInstance.destroySurfaceKHR(pImpl->surface);
         pImpl->vkInstance.destroy();
     }
 }
