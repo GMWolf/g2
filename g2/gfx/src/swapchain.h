@@ -26,6 +26,10 @@ namespace g2::gfx
         vk::Format format;
         vk::Extent2D extent;
 
+        inline operator bool() const
+        {
+            return swapchain;
+        }
         void shutdown(vk::Device device);
     };
 
@@ -33,7 +37,7 @@ namespace g2::gfx
 
     bool checkSwapChainAdequate(const SwapChainSupportDetails &swapChainSupport);
 
-    std::optional<SwapChain> createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Extent2D windowExtent, QueueFamilyIndices familyIndices);
+    SwapChain createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Extent2D windowExtent, QueueFamilyIndices familyIndices);
 }
 
 #endif //G2_SWAPCHAIN_H

@@ -28,6 +28,7 @@ int main()
     while(!app.shouldClose())
     {
         app.pollEvents();
+        gfx.drawFrame();
     }
 
 }

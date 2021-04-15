@@ -24,6 +24,8 @@ namespace g2::gfx
     public:
         explicit Instance(const InstanceConfig& config);
         ~Instance();
+
+        void drawFrame();
     };
 }
 #endif //G2_GFX_INSTANCE_H

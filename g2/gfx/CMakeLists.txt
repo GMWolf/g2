@@ -1,5 +1,5 @@
 add_library(g2_gfx
-        include/g2/gfx_instance.h src/validation.h src/device.cpp src/device.h src/swapchain.cpp src/swapchain.h)
+        include/g2/gfx_instance.h src/validation.h src/device.cpp src/device.h src/swapchain.cpp src/swapchain.h src/shader.cpp src/shader.h src/pipeline.cpp src/pipeline.h src/renderpass.cpp src/renderpass.h)
 
 target_sources(g2_gfx PRIVATE
         src/vk.h

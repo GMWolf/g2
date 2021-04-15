@@ -178,7 +178,7 @@ namespace g2::gfx
     }
 
 
-    std::optional<SwapChain> createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Extent2D windowExtent, QueueFamilyIndices familyIndices)
+    SwapChain createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Extent2D windowExtent, QueueFamilyIndices familyIndices)
     {
         auto vkSwapChain = createVKSwapChain(device, physicalDevice, surface, windowExtent, familyIndices);
         if (!vkSwapChain)
@@ -187,10 +187,11 @@ namespace g2::gfx
         }
 
         std::vector<vk::Image> images = device.getSwapchainImagesKHR(vkSwapChain.value().swapchainKhr).value;
-
+        std::vector<vk::ImageView> imageViews = createImageViews(device, images, vkSwapChain->surfaceFormat.format);
         return SwapChain {
                 .swapchain = vkSwapChain.value().swapchainKhr,
                 .images = std::move(images),
+                .imageViews = std::move(imageViews),
                 .format = vkSwapChain.value().surfaceFormat.format,
                 .extent = vkSwapChain.value().extent2D,
         };
@@ -198,9 +199,13 @@ namespace g2::gfx
 
     void SwapChain::shutdown(vk::Device device)
     {
-        for(auto view : imageViews)
+        for(auto& view : imageViews)
         {
             device.destroyImageView(view);
+            view = vk::ImageView{};
         }
+
+        device.destroySwapchainKHR(swapchain);
+        swapchain = vk::SwapchainKHR{};
     }
 }
