@@ -65,7 +65,7 @@ g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, vk::ShaderModule ve
     vk::PipelineRasterizationStateCreateInfo rasterizer
     {
         .depthClampEnable = false,
-        .rasterizerDiscardEnable = true,
+        .rasterizerDiscardEnable = false,
         .polygonMode = vk::PolygonMode::eFill,
         .cullMode = vk::CullModeFlagBits::eBack,
         .frontFace = vk::FrontFace::eClockwise,
