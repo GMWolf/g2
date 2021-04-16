@@ -5,16 +5,15 @@
 #ifndef G2_SHADER_H
 #define G2_SHADER_H
 
-#include "vk.h"
-#include <span>
 #include <optional>
+#include <span>
 
-namespace g2::gfx
-{
+#include "vk.h"
 
-    vk::ShaderModule createShaderModule(vk::Device device, std::span<char> code);
+namespace g2::gfx {
+
+vk::ShaderModule createShaderModule(vk::Device device, std::span<char> code);
 
 }
 
-
-#endif //G2_SHADER_H
+#endif  // G2_SHADER_H

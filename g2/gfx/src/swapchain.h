@@ -5,39 +5,36 @@
 #ifndef G2_SWAPCHAIN_H
 #define G2_SWAPCHAIN_H
 
-#include "vk.h"
 #include <vector>
 
 #include "device.h"
-namespace g2::gfx
-{
-    struct SwapChainSupportDetails
-    {
-        vk::SurfaceCapabilitiesKHR capabilities;
-        std::vector<vk::SurfaceFormatKHR> formats;
-        std::vector<vk::PresentModeKHR> presentModes;
-    };
+#include "vk.h"
+namespace g2::gfx {
+struct SwapChainSupportDetails {
+  vk::SurfaceCapabilitiesKHR capabilities;
+  std::vector<vk::SurfaceFormatKHR> formats;
+  std::vector<vk::PresentModeKHR> presentModes;
+};
 
-    struct SwapChain
-    {
-        vk::SwapchainKHR swapchain;
-        std::vector<vk::Image> images;
-        std::vector<vk::ImageView> imageViews;
-        vk::Format format;
-        vk::Extent2D extent;
+struct SwapChain {
+  vk::SwapchainKHR swapchain;
+  std::vector<vk::Image> images;
+  std::vector<vk::ImageView> imageViews;
+  vk::Format format;
+  vk::Extent2D extent;
 
-        inline operator bool() const
-        {
-            return swapchain;
-        }
-        void shutdown(vk::Device device);
-    };
+  inline operator bool() const { return swapchain; }
+  void shutdown(vk::Device device);
+};
 
-    SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device, vk::SurfaceKHR surface);
+SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device,
+                                              vk::SurfaceKHR surface);
 
-    bool checkSwapChainAdequate(const SwapChainSupportDetails &swapChainSupport);
+bool checkSwapChainAdequate(const SwapChainSupportDetails &swapChainSupport);
 
-    SwapChain createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, vk::Extent2D windowExtent, QueueFamilyIndices familyIndices);
-}
+SwapChain createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice,
+                          vk::SurfaceKHR surface, vk::Extent2D windowExtent,
+                          QueueFamilyIndices familyIndices);
+}  // namespace g2::gfx
 
-#endif //G2_SWAPCHAIN_H
+#endif  // G2_SWAPCHAIN_H

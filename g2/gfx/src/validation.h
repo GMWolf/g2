@@ -7,10 +7,9 @@
 
 #include <span>
 
-namespace g2::gfx
-{
-    std::span<const char*> getValidationLayerNames();
-    bool checkValidationSupport();
-}
+namespace g2::gfx {
+std::span<const char *> getValidationLayerNames();
+bool checkValidationSupport();
+}  // namespace g2::gfx
 
-#endif //G2_VALIDATION_H
+#endif  // G2_VALIDATION_H

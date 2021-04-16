@@ -4,44 +4,40 @@
 
 #ifndef G2_APPLICATION_H
 #define G2_APPLICATION_H
+#include <glm/glm.hpp>
 #include <memory>
 #include <span>
-#include <glm/glm.hpp>
 
 struct VkSurfaceKHR_T;
-typedef VkSurfaceKHR_T* VkSurfaceKHR;
+typedef VkSurfaceKHR_T *VkSurfaceKHR;
 
 struct VkInstance_T;
-typedef VkInstance_T* VkInstance;
+typedef VkInstance_T *VkInstance;
 
-namespace g2
-{
-    struct ApplicationConfiguration
-    {
-        int width;
-        int height;
-        const char* title;
-    };
+namespace g2 {
+struct ApplicationConfiguration {
+  int width;
+  int height;
+  const char *title;
+};
 
-    class Application
-    {
-        struct Impl;
-        std::unique_ptr<Impl> pImpl;
-    public:
-        explicit Application(const ApplicationConfiguration& appConfig);
-        ~Application();
+class Application {
+  struct Impl;
+  std::unique_ptr<Impl> pImpl;
 
-        [[nodiscard]] bool shouldClose() const;
-        void pollEvents() const;
+ public:
+  explicit Application(const ApplicationConfiguration &appConfig);
+  ~Application();
 
-        glm::ivec2 getWindowSize();
+  [[nodiscard]] bool shouldClose() const;
+  void pollEvents() const;
 
-        VkSurfaceKHR createSurface(VkInstance instance);
-    };
+  glm::ivec2 getWindowSize();
 
+  VkSurfaceKHR createSurface(VkInstance instance);
+};
 
+std::span<const char *> getVkExtensions();
+}  // namespace g2
 
-    std::span<const char*> getVkExtensions();
-}
-
-#endif //G2_APPLICATION_H
+#endif  // G2_APPLICATION_H

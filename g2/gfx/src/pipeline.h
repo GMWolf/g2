@@ -7,21 +7,17 @@
 
 #include "vk.h"
 
+namespace g2::gfx {
 
-namespace g2::gfx
-{
+struct Pipeline {
+  vk::Pipeline pipeline{};
+  vk::PipelineLayout pipelineLayout{};
 
-    struct Pipeline
-    {
-        vk::Pipeline pipeline {};
-        vk::PipelineLayout pipelineLayout {};
+  inline operator bool() const { return pipeline; }
+};
 
-        inline operator bool() const
-        {
-            return pipeline;
-        }
-    };
-
-    Pipeline createPipeline(vk::Device device, vk::ShaderModule vertex, vk::ShaderModule fragment, vk::RenderPass renderPass, uint32_t subpass);
-}
-#endif //G2_PIPELINE_H
+Pipeline createPipeline(vk::Device device, vk::ShaderModule vertex,
+                        vk::ShaderModule fragment, vk::RenderPass renderPass,
+                        uint32_t subpass);
+}  // namespace g2::gfx
+#endif  // G2_PIPELINE_H

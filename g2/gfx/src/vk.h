@@ -9,5 +9,4 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan.hpp>
 
-
-#endif //G2_VK_H
+#endif  // G2_VK_H
