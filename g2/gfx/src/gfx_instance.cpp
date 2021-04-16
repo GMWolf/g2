@@ -17,8 +17,67 @@
 #include <iterator>
 #include <iostream>
 
+static void recordCommands(const vk::CommandBuffer &cmd, const vk::Extent2D &renderExtent, vk::RenderPass renderpass, vk::Pipeline pipeline, vk::Framebuffer framebuffer)
+{
+    vk::CommandBufferBeginInfo beginInfo
+    {
+        .flags = {},
+        .pInheritanceInfo = nullptr,
+    };
+
+    if (cmd.begin(beginInfo) != vk::Result::eSuccess)
+    {
+        std::cerr << "Failed to begin command buffer" << std::endl;
+    }
+
+    vk::ClearValue clearValue = vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
+
+    vk::RenderPassBeginInfo renderPassInfo
+    {
+        .renderPass = renderpass,
+        .framebuffer = framebuffer,
+        .renderArea = vk::Rect2D
+                {
+                        .offset = {0,0},
+                        .extent = renderExtent,
+                },
+        .clearValueCount = 1,
+        .pClearValues = &clearValue,
+    };
+
+    vk::Viewport viewport
+    {
+        .x = 0,
+        .y = 0,
+        .width = static_cast<float>(renderExtent.width),
+        .height = static_cast<float>(renderExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+    vk::Rect2D scissor
+    {
+        .offset = {0,0},
+        .extent = renderExtent,
+    };
+    cmd.setViewport(0, viewport);
+    cmd.setScissor(0, scissor);
+    cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+    cmd.draw(3, 1, 0, 0);
+
+    cmd.endRenderPass();
+
+    if (cmd.end() != vk::Result::eSuccess)
+    {
+        std::cerr << "Failed to record command buffer\n";
+    }
+}
+
 namespace g2::gfx
 {
+
+    static const int MAX_FRAMES_IN_FLIGHT = 2;
+
     struct Instance::Impl
     {
         vk::Instance vkInstance;
@@ -37,9 +96,13 @@ namespace g2::gfx
         vk::CommandPool commandPool;
         std::vector<vk::CommandBuffer> commandBuffers;
 
-        vk::Semaphore imageAvailableSemaphore;
-        vk::Semaphore renderFinishedSemaphore;
+        vk::Semaphore imageAvailableSemaphores[MAX_FRAMES_IN_FLIGHT];
+        vk::Semaphore renderFinishedSemaphores[MAX_FRAMES_IN_FLIGHT];
 
+        vk::Fence inFlightFences[MAX_FRAMES_IN_FLIGHT];
+        std::vector<vk::Fence> imagesInFlight;
+
+        size_t currentFrame = 0;
     };
 
 
@@ -84,7 +147,7 @@ namespace g2::gfx
     {
         vk::CommandPoolCreateInfo poolInfo
         {
-            .flags = {},
+            .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
             .queueFamilyIndex = familyIndices.graphics.value(),
         };
 
@@ -200,7 +263,7 @@ namespace g2::gfx
         {
             .commandPool = pImpl->commandPool,
             .level = vk::CommandBufferLevel::ePrimary,
-            .commandBufferCount = static_cast<uint32_t>(pImpl->frameBuffers.size()),
+            .commandBufferCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT),
         };
 
         auto allocResult = pImpl->vkDevice.allocateCommandBuffers(allocInfo);
@@ -211,81 +274,36 @@ namespace g2::gfx
             return;
         }
 
-        pImpl->commandBuffers = allocResult.value;
+        pImpl->commandBuffers = std::move(allocResult.value);
 
-
-        for(size_t i = 0; i < pImpl->commandBuffers.size(); i++)
+        //Create semaphores & fences
+        vk::SemaphoreCreateInfo semaphoreInfo{};
+        vk::FenceCreateInfo fenceInfo
         {
+            .flags = vk::FenceCreateFlagBits::eSignaled
+        };
 
-            vk::CommandBuffer cmd = pImpl->commandBuffers[i];
-
-            vk::CommandBufferBeginInfo beginInfo
-            {
-                .flags = {},
-                .pInheritanceInfo = nullptr,
-            };
-
-            if (cmd.begin(beginInfo) != vk::Result::eSuccess)
-            {
-                std::cerr << "Failed to begin command buffer" << std::endl;
-            }
-
-            vk::ClearValue clearValue = vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
-
-            vk::RenderPassBeginInfo renderPassInfo
-            {
-                .renderPass = pImpl->renderPass,
-                .framebuffer = pImpl->frameBuffers[i],
-                .renderArea = vk::Rect2D
-                {
-                    .offset = {0,0},
-                    .extent = swapChain.extent,
-                },
-                .clearValueCount = 1,
-                .pClearValues = &clearValue,
-            };
-
-            vk::Viewport viewport
-            {
-                .x = 0,
-                .y = 0,
-                .width = static_cast<float>(pImpl->swapChain.extent.width),
-                .height = static_cast<float>(pImpl->swapChain.extent.height),
-                .minDepth = 0.0f,
-                .maxDepth = 1.0f,
-            };
-            vk::Rect2D scissor
-            {
-                .offset = {0,0},
-                .extent = pImpl->swapChain.extent,
-            };
-            cmd.setViewport(0, viewport);
-            cmd.setScissor(0, scissor);
-            cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-            cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pImpl->pipeline.pipeline);
-            cmd.draw(3, 1, 0, 0);
-
-            cmd.endRenderPass();
-
-            if (cmd.end() != vk::Result::eSuccess)
-            {
-                std::cerr << "Failed to record command buffer\n";
-                return;
-            }
+        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            pImpl->imageAvailableSemaphores[i] = pImpl->vkDevice.createSemaphore(semaphoreInfo).value;
+            pImpl->renderFinishedSemaphores[i] = pImpl->vkDevice.createSemaphore(semaphoreInfo).value;
+            pImpl->inFlightFences[i] = pImpl->vkDevice.createFence(fenceInfo).value;
         }
 
-        vk::SemaphoreCreateInfo semaphoreInfo{};
-
-        pImpl->imageAvailableSemaphore = pImpl->vkDevice.createSemaphore(semaphoreInfo).value;
-        pImpl->renderFinishedSemaphore = pImpl->vkDevice.createSemaphore(semaphoreInfo).value;
+        pImpl->imagesInFlight.resize(pImpl->swapChain.images.size());
 
     }
 
     Instance::~Instance()
     {
+        vk::Result waitIdleResult = pImpl->vkDevice.waitIdle();
 
-        pImpl->vkDevice.destroySemaphore(pImpl->imageAvailableSemaphore);
-        pImpl->vkDevice.destroySemaphore(pImpl->renderFinishedSemaphore);
+        for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            pImpl->vkDevice.destroySemaphore(pImpl->imageAvailableSemaphores[i]);
+            pImpl->vkDevice.destroySemaphore(pImpl->renderFinishedSemaphores[i]);
+            pImpl->vkDevice.destroyFence(pImpl->inFlightFences[i]);
+        }
 
         pImpl->vkDevice.destroyCommandPool(pImpl->commandPool);
 
@@ -308,7 +326,14 @@ namespace g2::gfx
     void Instance::drawFrame()
     {
 
-        auto acquire = pImpl->vkDevice.acquireNextImageKHR(pImpl->swapChain.swapchain, UINT64_MAX, pImpl->imageAvailableSemaphore);
+        //Wait for cmd buffer to be done being used
+        vk::Result waitResult = pImpl->vkDevice.waitForFences(pImpl->inFlightFences[pImpl->currentFrame], true, UINT64_MAX);
+
+        auto acquire = pImpl->vkDevice.acquireNextImageKHR(
+                pImpl->swapChain.swapchain,
+                UINT64_MAX,
+                pImpl->imageAvailableSemaphores[pImpl->currentFrame]
+                );
 
         if (acquire.result != vk::Result::eSuccess)
         {
@@ -317,8 +342,22 @@ namespace g2::gfx
 
         uint32_t imageIndex = acquire.value;
 
-        vk::Semaphore waitSemaphores[] = {pImpl->imageAvailableSemaphore};
-        vk::Semaphore signalSemaphores[] = {pImpl->renderFinishedSemaphore};
+
+        vk::CommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
+        vk::Extent2D renderExtent = pImpl->swapChain.extent;
+
+        cmd.reset({});
+        recordCommands(cmd, renderExtent, pImpl->renderPass, pImpl->pipeline.pipeline, pImpl->frameBuffers[imageIndex]);
+
+
+        if(pImpl->imagesInFlight[imageIndex])
+        {
+            vk::Result r = pImpl->vkDevice.waitForFences(pImpl->imagesInFlight[imageIndex], true, UINT64_MAX);
+        }
+        pImpl->imagesInFlight[imageIndex] = pImpl->inFlightFences[pImpl->currentFrame];
+
+        vk::Semaphore waitSemaphores[] = {pImpl->imageAvailableSemaphores[pImpl->currentFrame]};
+        vk::Semaphore signalSemaphores[] = {pImpl->renderFinishedSemaphores[pImpl->currentFrame]};
         vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
 
         vk::SubmitInfo submitInfo
@@ -327,12 +366,13 @@ namespace g2::gfx
             .pWaitSemaphores = waitSemaphores,
             .pWaitDstStageMask = waitStages,
             .commandBufferCount = 1,
-            .pCommandBuffers = &pImpl->commandBuffers[imageIndex],
+            .pCommandBuffers = &cmd,
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = signalSemaphores,
         };
 
-        if (pImpl->graphicsQueue.submit(1, &submitInfo, {}) != vk::Result::eSuccess)
+        pImpl->vkDevice.resetFences(pImpl->inFlightFences[pImpl->currentFrame]);
+        if (pImpl->graphicsQueue.submit(1, &submitInfo, pImpl->inFlightFences[pImpl->currentFrame]) != vk::Result::eSuccess)
         {
             std::cerr << "failed to submit command buffers\n";
         }
@@ -354,12 +394,7 @@ namespace g2::gfx
             std::cerr << "Failed to present image\n";
         }
 
-
-        auto r = pImpl->graphicsQueue.waitIdle();
-        if (r != vk::Result::eSuccess)
-        {
-            std::cerr << "Error wating idle\n";
-        }
+        pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     }
 }
