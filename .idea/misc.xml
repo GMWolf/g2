@@ -9,6 +9,10 @@
       <file path="$PROJECT_DIR$/g2/platform/desktop" />
       <file path="$PROJECT_DIR$/g2/platform/include" />
     </sourceRoots>
+    <libraryRoots>
+      <file path="$PROJECT_DIR$/thirdparty/glfw" />
+      <file path="$PROJECT_DIR$/thirdparty/glm" />
+    </libraryRoots>
     <excludeRoots>
       <file path="$PROJECT_DIR$/build" />
     </excludeRoots>

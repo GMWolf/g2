@@ -8,8 +8,7 @@
 
 int main()
 {
-    g2::ApplicationConfiguration appConfig
-    {
+    g2::ApplicationConfiguration appConfig{
         .width = 1280,
         .height = 720,
         .title = "Application"
@@ -17,18 +16,17 @@ int main()
 
     auto app = g2::Application(appConfig);
 
-    g2::gfx::InstanceConfig gfxConfig
-    {
+    g2::gfx::InstanceConfig gfxConfig{
         .application = &app,
         .vkExtensions = g2::getVkExtensions(),
     };
 
     auto gfx = g2::gfx::Instance(gfxConfig);
 
-    while(!app.shouldClose())
-    {
-        app.pollEvents();
-        gfx.drawFrame();
+    while(!app.shouldClose()) {
+      app.pollEvents();
+      gfx.setFramebufferExtent(app.getWindowSize());
+      gfx.drawFrame();
     }
 
 }

@@ -79,10 +79,12 @@ struct Instance::Impl {
   vk::Instance vkInstance;
   vk::PhysicalDevice physicalDevice;
   vk::Device vkDevice;
+  QueueFamilyIndices queue_family_indices;
   vk::Queue graphicsQueue;
   vk::Queue presentQueue;
   vk::SurfaceKHR surface;
   SwapChain swapChain;
+  vk::Extent2D framebufferExtent;
 
   vk::RenderPass renderPass;
   Pipeline pipeline;
@@ -102,6 +104,7 @@ struct Instance::Impl {
 };
 
 static vk::Instance createVkInstance(const InstanceConfig &config) {
+
   if (!checkValidationSupport()) {
     return {};
   }
@@ -149,8 +152,37 @@ static vk::CommandPool createCommandPool(vk::Device device,
   return pool.value;
 }
 
+static void createFrameBuffers(vk::Device device, std::span<vk::Framebuffer> framebuffers, std::span<vk::ImageView> imageViews, vk::Extent2D extent, vk::RenderPass renderPass) {
+  for (size_t i = 0; i < imageViews.size(); i++) {
+    vk::ImageView attachments[] = {imageViews[i]};
+
+    vk::FramebufferCreateInfo frameBufferInfo{
+        .renderPass = renderPass,
+        .attachmentCount = 1,
+        .pAttachments = attachments,
+        .width = extent.width,
+        .height = extent.height,
+        .layers = 1,
+    };
+
+    auto frameBufferResult = device.createFramebuffer(frameBufferInfo);
+    if (frameBufferResult.result != vk::Result::eSuccess) {
+      std::cerr << "Error creating framebuffer\n";
+    }
+
+    framebuffers[i] = frameBufferResult.value;
+  }
+}
+
+
 Instance::Instance(const InstanceConfig &config) {
   pImpl = std::make_unique<Impl>();
+
+  glm::ivec2 appSize = config.application->getWindowSize();
+  vk::Extent2D appExtent{static_cast<uint32_t>(appSize.x),
+                         static_cast<uint32_t>(appSize.y)};
+
+  pImpl->framebufferExtent = appExtent;
 
   pImpl->vkInstance = createVkInstance(config);
 
@@ -178,9 +210,7 @@ Instance::Instance(const InstanceConfig &config) {
   pImpl->presentQueue =
       pImpl->vkDevice.getQueue(queueFamilyIndices.present.value(), 0);
 
-  glm::ivec2 appSize = config.application->getWindowSize();
-  vk::Extent2D appExtent{static_cast<uint32_t>(appSize.x),
-                         static_cast<uint32_t>(appSize.y)};
+
 
   auto swapChain =
       createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface,
@@ -228,26 +258,7 @@ Instance::Instance(const InstanceConfig &config) {
   // Create framebuffers
 
   pImpl->frameBuffers.resize(swapChain.imageViews.size());
-
-  for (size_t i = 0; i < swapChain.imageViews.size(); i++) {
-    vk::ImageView attachments[] = {swapChain.imageViews[i]};
-
-    vk::FramebufferCreateInfo frameBufferInfo{
-        .renderPass = pImpl->renderPass,
-        .attachmentCount = 1,
-        .pAttachments = attachments,
-        .width = swapChain.extent.width,
-        .height = swapChain.extent.height,
-        .layers = 1,
-    };
-
-    auto frameBufferResult = pImpl->vkDevice.createFramebuffer(frameBufferInfo);
-    if (frameBufferResult.result != vk::Result::eSuccess) {
-      return;
-    }
-
-    pImpl->frameBuffers[i] = frameBufferResult.value;
-  }
+  createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews, swapChain.extent, pImpl->renderPass);
 
   pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
 
@@ -316,8 +327,29 @@ void Instance::drawFrame() {
       pImpl->swapChain.swapchain, UINT64_MAX,
       pImpl->imageAvailableSemaphores[pImpl->currentFrame]);
 
-  if (acquire.result != vk::Result::eSuccess) {
+  if (acquire.result == vk::Result::eErrorOutOfDateKHR || acquire.result == vk::Result::eSuboptimalKHR ) {
+
+    auto waitIdleResult = pImpl->vkDevice.waitIdle();
+
+    //We need to reset semaphore. simple way is to recreate it
+    pImpl->vkDevice.destroySemaphore(pImpl->imageAvailableSemaphores[pImpl->currentFrame]);
+    vk::SemaphoreCreateInfo semaphoreInfo{};
+    pImpl->imageAvailableSemaphores[pImpl->currentFrame] = pImpl->vkDevice.createSemaphore(semaphoreInfo).value;
+
+    auto prevFormat = pImpl->swapChain.format;
+    pImpl->swapChain.shutdown(pImpl->vkDevice);
+    pImpl->swapChain = createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface, pImpl->framebufferExtent, pImpl->queue_family_indices);
+    assert(prevFormat == pImpl->swapChain.format);
+
+    for(auto framebuffer : pImpl->frameBuffers) {
+      pImpl->vkDevice.destroyFramebuffer(framebuffer);
+    }
+    createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, pImpl->swapChain.imageViews, pImpl->swapChain.extent, pImpl->renderPass);
+
+    return;
+  } else if (acquire.result != vk::Result::eSuccess && acquire.result != vk::Result::eSuboptimalKHR) {
     std::cerr << "Error acquiring image\n";
+    return;
   }
 
   uint32_t imageIndex = acquire.value;
@@ -376,5 +408,9 @@ void Instance::drawFrame() {
   }
 
   pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+void Instance::setFramebufferExtent(glm::ivec2 size) {
+  pImpl->framebufferExtent.width = size.x;
+  pImpl->framebufferExtent.height = size.y;
 }
 }  // namespace g2::gfx

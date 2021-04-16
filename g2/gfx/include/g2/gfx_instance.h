@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <span>
+#include <glm/glm.hpp>
 
 namespace g2::gfx {
 struct InstanceConfig {
@@ -22,6 +23,8 @@ class Instance {
  public:
   explicit Instance(const InstanceConfig &config);
   ~Instance();
+
+  void setFramebufferExtent(glm::ivec2 size);
 
   void drawFrame();
 };
