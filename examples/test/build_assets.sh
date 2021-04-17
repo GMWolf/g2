@@ -1,0 +1,1 @@
+flatc -b ../../g2/gfx/flatbufferschemas/pipeline.fbs pipeline.json

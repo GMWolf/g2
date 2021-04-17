@@ -230,7 +230,7 @@ Instance::Instance(const InstanceConfig &config) {
 
   const PipelineDef* pipeline_def = GetPipelineDef(pipeline_buf.data());
 
-  pImpl->pipeline = createPipeline(pImpl->vkDevice, pipeline_def, pImpl->renderPass, 0);
+  pImpl->pipeline = createPipeline(pImpl->vkDevice, pipeline_def, swapChain.format);
 
   if (!pImpl->pipeline) {
     std::cerr << "failed to create pipeline\n";

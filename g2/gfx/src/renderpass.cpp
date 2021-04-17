@@ -55,4 +55,53 @@ vk::RenderPass createRenderPass(vk::Device device, vk::Format imageFormat) {
 
   return renderPassResult.value;
 }
+vk::RenderPass createCompatibilityRenderPass(vk::Device device, std::span<vk::Format> imageFormats) {
+
+  std::vector<vk::AttachmentDescription> attachments;
+  attachments.reserve(imageFormats.size());
+
+  for(vk::Format format : imageFormats) {
+    vk::AttachmentDescription attachment{
+        .format = format,
+        .samples = vk::SampleCountFlagBits::e1,
+        .loadOp = vk::AttachmentLoadOp::eDontCare,
+        .storeOp = vk::AttachmentStoreOp::eDontCare,
+        .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+        .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+        .initialLayout = vk::ImageLayout::eUndefined,
+        .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+    };
+
+    attachments.push_back(attachment);
+  }
+
+  vk::AttachmentReference colorAttachmentRef{
+      .attachment = 0,
+      .layout = vk::ImageLayout::eColorAttachmentOptimal,
+  };
+
+  vk::SubpassDescription subpass {
+      .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+      .colorAttachmentCount = 1,
+      .pColorAttachments = &colorAttachmentRef,
+  };
+
+  vk::RenderPassCreateInfo renderPassCreateInfo{
+      .attachmentCount = static_cast<uint32_t>(attachments.size()),
+      .pAttachments = attachments.data(),
+      .subpassCount = 1,
+      .pSubpasses = &subpass,
+      .dependencyCount = 0,
+      .pDependencies = nullptr,
+  };
+
+  auto renderPassResult = device.createRenderPass(renderPassCreateInfo);
+
+  if (renderPassResult.result != vk::Result::eSuccess) {
+    return {};
+  }
+
+  return renderPassResult.value;
+
+}
 }  // namespace g2::gfx

@@ -17,6 +17,6 @@ struct Pipeline {
   inline operator bool() const { return pipeline; }
 };
 
-Pipeline createPipeline(vk::Device device, const PipelineDef* pipelineDef, vk::RenderPass renderPass, uint32_t subpass);
+Pipeline createPipeline(vk::Device device, const PipelineDef* pipelineDef, vk::Format displayFormat);
 }  // namespace g2::gfx
 #endif  // G2_PIPELINE_H

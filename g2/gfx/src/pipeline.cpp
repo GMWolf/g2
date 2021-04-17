@@ -5,8 +5,9 @@
 #include "pipeline.h"
 #include "shader.h"
 #include <fstream>
+#include "renderpass.h"
 
-g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* pipeline_def, vk::RenderPass renderPass, uint32_t subpass) {
+g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* pipeline_def, vk::Format displayFormat) {
 
 
   std::ifstream vertexInput(pipeline_def->shader()->vertex()->c_str(), std::ios::binary);
@@ -134,6 +135,21 @@ g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* 
 
   vk::PipelineLayout pipelineLayout = pipelineLayoutResult.value;
 
+
+  //Create compatibility renderpass
+  std::vector<vk::Format> formats;
+  for(const Attachment* attachment : *pipeline_def->attachments())
+  {
+    if (attachment->format() == Format::display) {
+      formats.push_back(displayFormat);
+    } else {
+      formats.push_back(static_cast<vk::Format>(static_cast<uint32_t>(attachment->format())));
+    }
+  }
+
+  vk::RenderPass render_pass = createCompatibilityRenderPass(device, formats);
+
+
   vk::GraphicsPipelineCreateInfo pipelineInfo{
       .stageCount = 2,
       .pStages = shaderStages,
@@ -146,8 +162,8 @@ g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* 
       .pColorBlendState = &colorBlending,
       .pDynamicState = &dynamicState,
       .layout = pipelineLayout,
-      .renderPass = renderPass,
-      .subpass = subpass,
+      .renderPass = render_pass,
+      .subpass = 0,
       .basePipelineHandle = {},
       .basePipelineIndex = -1,
   };
@@ -156,6 +172,7 @@ g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* 
 
   device.destroyShaderModule(vertexModule);
   device.destroyShaderModule(fragmentModule);
+  device.destroyRenderPass(render_pass);
 
   if (pipelineResult.result != vk::Result::eSuccess) {
     return {};

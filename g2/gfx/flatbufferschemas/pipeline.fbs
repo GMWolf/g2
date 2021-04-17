@@ -7,7 +7,7 @@ table ShaderSrc {
 }
 
 // vkBlendFactor
-enum BlendFactor : byte
+enum BlendFactor : ubyte
 {
     zero = 0,
     one = 1,
@@ -31,13 +31,23 @@ enum BlendFactor : byte
 }
 
 // vkBlendOp
-enum BlendOp : byte
+enum BlendOp : ubyte
 {
     add = 0,
     subtract = 1,
     reverse_subtract = 2,
     min = 3,
     max = 4,
+}
+
+// vkFormat
+enum Format : ushort {
+    undefined = 0,
+    display = 65535,
+}
+
+table Attachment {
+    format: Format;
 }
 
 struct BlendAttachment {
@@ -53,6 +63,7 @@ struct BlendAttachment {
 table PipelineDef {
     shader: ShaderSrc;
     blending: [BlendAttachment];
+    attachments: [Attachment];
 }
 
 root_type PipelineDef;
