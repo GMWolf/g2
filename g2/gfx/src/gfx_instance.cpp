@@ -18,59 +18,6 @@
 #include "validation.h"
 #include "vk.h"
 
-static void recordCommands(const vk::CommandBuffer &cmd,
-                           const vk::Extent2D &renderExtent,
-                           vk::RenderPass renderpass, vk::Pipeline pipeline,
-                           vk::Framebuffer framebuffer) {
-  vk::CommandBufferBeginInfo beginInfo{
-      .flags = {},
-      .pInheritanceInfo = nullptr,
-  };
-
-  if (cmd.begin(beginInfo) != vk::Result::eSuccess) {
-    std::cerr << "Failed to begin command buffer" << std::endl;
-  }
-
-  vk::ClearValue clearValue =
-      vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
-
-  vk::RenderPassBeginInfo renderPassInfo{
-      .renderPass = renderpass,
-      .framebuffer = framebuffer,
-      .renderArea =
-          vk::Rect2D{
-              .offset = {0, 0},
-              .extent = renderExtent,
-          },
-      .clearValueCount = 1,
-      .pClearValues = &clearValue,
-  };
-
-  vk::Viewport viewport{
-      .x = 0,
-      .y = 0,
-      .width = static_cast<float>(renderExtent.width),
-      .height = static_cast<float>(renderExtent.height),
-      .minDepth = 0.0f,
-      .maxDepth = 1.0f,
-  };
-  vk::Rect2D scissor{
-      .offset = {0, 0},
-      .extent = renderExtent,
-  };
-  cmd.setViewport(0, viewport);
-  cmd.setScissor(0, scissor);
-  cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-  cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-  cmd.draw(3, 1, 0, 0);
-
-  cmd.endRenderPass();
-
-  if (cmd.end() != vk::Result::eSuccess) {
-    std::cerr << "Failed to record command buffer\n";
-  }
-}
-
 namespace g2::gfx {
 
 static const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -87,7 +34,8 @@ struct Instance::Impl {
   vk::Extent2D framebufferExtent;
 
   vk::RenderPass renderPass;
-  Pipeline pipeline;
+
+  std::vector<std::unique_ptr<Pipeline>> pipelines;
 
   std::vector<vk::Framebuffer> frameBuffers;
 
@@ -101,6 +49,7 @@ struct Instance::Impl {
   std::vector<vk::Fence> imagesInFlight;
 
   size_t currentFrame = 0;
+  size_t currentFrameBufferIndex;
 };
 
 static vk::Instance createVkInstance(const InstanceConfig &config) {
@@ -224,21 +173,8 @@ Instance::Instance(const InstanceConfig &config) {
 
   pImpl->renderPass = createRenderPass(pImpl->vkDevice, swapChain.format);
 
-  std::ifstream pipeline_input("pipeline.bin", std::ios::binary);
-  std::vector<char> pipeline_buf((std::istreambuf_iterator<char>(pipeline_input)),
-                                (std::istreambuf_iterator<char>()));
-
-  const PipelineDef* pipeline_def = GetPipelineDef(pipeline_buf.data());
-
-  pImpl->pipeline = createPipeline(pImpl->vkDevice, pipeline_def, swapChain.format);
-
-  if (!pImpl->pipeline) {
-    std::cerr << "failed to create pipeline\n";
-    return;
-  }
 
   // Create framebuffers
-
   pImpl->frameBuffers.resize(swapChain.imageViews.size());
   createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews, swapChain.extent, pImpl->renderPass);
 
@@ -289,8 +225,11 @@ Instance::~Instance() {
     pImpl->vkDevice.destroyFramebuffer(framebuffer);
   }
 
-  pImpl->vkDevice.destroyPipelineLayout(pImpl->pipeline.pipelineLayout);
-  pImpl->vkDevice.destroyPipeline(pImpl->pipeline.pipeline);
+  for(auto& pipeline : pImpl->pipelines) {
+    pImpl->vkDevice.destroyPipelineLayout(pipeline->pipelineLayout);
+    pImpl->vkDevice.destroyPipeline(pipeline->pipeline);
+    pipeline.reset();
+  }
   pImpl->vkDevice.destroyRenderPass(pImpl->renderPass);
 
   pImpl->swapChain.shutdown(pImpl->vkDevice);
@@ -300,8 +239,62 @@ Instance::~Instance() {
   pImpl->vkInstance.destroy();
 }
 
-void Instance::drawFrame() {
-  // Wait for cmd buffer to be done being used
+void Instance::setFramebufferExtent(glm::ivec2 size) {
+  pImpl->framebufferExtent.width = size.x;
+  pImpl->framebufferExtent.height = size.y;
+}
+
+const Pipeline *Instance::createPipeline(const PipelineDef *pipeline_def) {
+  Pipeline pipeline = ::g2::gfx::createPipeline(pImpl->vkDevice, pipeline_def, pImpl->swapChain.format);
+  return pImpl->pipelines.emplace_back(std::make_unique<Pipeline>(pipeline)).get();
+}
+
+CommandEncoder Instance::beginRenderpass() {
+  vk::ClearValue clearValue =
+      vk::ClearColorValue(std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f});
+
+  vk::RenderPassBeginInfo renderPassInfo{
+      .renderPass = pImpl->renderPass,
+      .framebuffer = pImpl->frameBuffers[pImpl->currentFrameBufferIndex],
+      .renderArea =
+      vk::Rect2D{
+          .offset = {0, 0},
+          .extent = pImpl->swapChain.extent,
+      },
+      .clearValueCount = 1,
+      .pClearValues = &clearValue,
+  };
+
+  vk::Viewport viewport{
+      .x = 0,
+      .y = 0,
+      .width = static_cast<float>(pImpl->swapChain.extent.width),
+      .height = static_cast<float>(pImpl->swapChain.extent.height),
+      .minDepth = 0.0f,
+      .maxDepth = 1.0f,
+  };
+  vk::Rect2D scissor{
+      .offset = {0, 0},
+      .extent = pImpl->swapChain.extent,
+  };
+
+  vk::CommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
+
+  cmd.setViewport(0, viewport);
+  cmd.setScissor(0, scissor);
+  cmd.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+  return CommandEncoder {
+      .cmdbuf = *reinterpret_cast<uintptr_t*>(&cmd),
+  };
+
+}
+void Instance::endRenderpass(CommandEncoder& command_encoder) {
+  vk::CommandBuffer& cmd = *reinterpret_cast<vk::CommandBuffer*>(&command_encoder.cmdbuf);
+  cmd.endRenderPass();
+  command_encoder.cmdbuf = 0;
+}
+bool Instance::beginFrame() {
   vk::Result waitResult = pImpl->vkDevice.waitForFences(
       pImpl->inFlightFences[pImpl->currentFrame], true, UINT64_MAX);
 
@@ -328,20 +321,37 @@ void Instance::drawFrame() {
     }
     createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, pImpl->swapChain.imageViews, pImpl->swapChain.extent, pImpl->renderPass);
 
-    return;
+    return false;
   } else if (acquire.result != vk::Result::eSuccess && acquire.result != vk::Result::eSuboptimalKHR) {
     std::cerr << "Error acquiring image\n";
-    return;
+    return false;
   }
 
   uint32_t imageIndex = acquire.value;
+  pImpl->currentFrameBufferIndex = imageIndex;
 
   vk::CommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
-  vk::Extent2D renderExtent = pImpl->swapChain.extent;
-
   cmd.reset({});
-  recordCommands(cmd, renderExtent, pImpl->renderPass, pImpl->pipeline.pipeline,
-                 pImpl->frameBuffers[imageIndex]);
+
+  vk::CommandBufferBeginInfo beginInfo{
+      .flags = {},
+      .pInheritanceInfo = nullptr,
+  };
+
+  if (cmd.begin(beginInfo) != vk::Result::eSuccess) {
+    std::cerr << "Failed to begin command buffer" << std::endl;
+  }
+
+  return true;
+}
+void Instance::endFrame() {
+
+  uint32_t imageIndex = pImpl->currentFrameBufferIndex;
+  vk::CommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
+
+  if (cmd.end() != vk::Result::eSuccess) {
+    std::cerr << "Failed to record command buffer\n";
+  }
 
   if (pImpl->imagesInFlight[imageIndex]) {
     vk::Result r = pImpl->vkDevice.waitForFences(
@@ -390,9 +400,5 @@ void Instance::drawFrame() {
   }
 
   pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-void Instance::setFramebufferExtent(glm::ivec2 size) {
-  pImpl->framebufferExtent.width = size.x;
-  pImpl->framebufferExtent.height = size.y;
 }
 }  // namespace g2::gfx
