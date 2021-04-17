@@ -4,3 +4,6 @@
 [submodule "thirdparty/glm"]
 	path = thirdparty/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "thirdparty/flatbuffers"]
+	path = thirdparty/flatbuffers
+	url = git@github.com:google/flatbuffers.git

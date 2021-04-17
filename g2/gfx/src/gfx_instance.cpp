@@ -224,31 +224,13 @@ Instance::Instance(const InstanceConfig &config) {
 
   pImpl->renderPass = createRenderPass(pImpl->vkDevice, swapChain.format);
 
-  std::ifstream vertexInput("vert.spv", std::ios::binary);
-  std::vector<char> vertexBytes((std::istreambuf_iterator<char>(vertexInput)),
+  std::ifstream pipeline_input("pipeline.bin", std::ios::binary);
+  std::vector<char> pipeline_buf((std::istreambuf_iterator<char>(pipeline_input)),
                                 (std::istreambuf_iterator<char>()));
 
-  std::ifstream fragmentInput("frag.spv", std::ios::binary);
-  std::vector<char> fragmentBytes(
-      (std::istreambuf_iterator<char>(fragmentInput)),
-      (std::istreambuf_iterator<char>()));
+  const PipelineDef* pipeline_def = GetPipelineDef(pipeline_buf.data());
 
-  vk::ShaderModule vertexModule =
-      createShaderModule(pImpl->vkDevice, vertexBytes);
-  vk::ShaderModule fragmentModule =
-      createShaderModule(pImpl->vkDevice, fragmentBytes);
-
-  // TODO potentially leaking one of the shaders
-  if (!vertexModule || !fragmentModule) {
-    std::cerr << "failed to create shader modules\n";
-    return;
-  }
-
-  pImpl->pipeline = createPipeline(pImpl->vkDevice, vertexModule,
-                                   fragmentModule, pImpl->renderPass, 0);
-
-  pImpl->vkDevice.destroyShaderModule(vertexModule);
-  pImpl->vkDevice.destroyShaderModule(fragmentModule);
+  pImpl->pipeline = createPipeline(pImpl->vkDevice, pipeline_def, pImpl->renderPass, 0);
 
   if (!pImpl->pipeline) {
     std::cerr << "failed to create pipeline\n";

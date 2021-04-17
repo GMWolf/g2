@@ -4,14 +4,18 @@
   <component name="CidrRootsConfiguration">
     <sourceRoots>
       <file path="$PROJECT_DIR$/examples/test/src" />
+      <file path="$PROJECT_DIR$/g2/gfx/flatbufferschemas" />
+      <file path="$PROJECT_DIR$/g2/gfx/gen" />
       <file path="$PROJECT_DIR$/g2/gfx/include" />
       <file path="$PROJECT_DIR$/g2/gfx/src" />
       <file path="$PROJECT_DIR$/g2/platform/desktop" />
       <file path="$PROJECT_DIR$/g2/platform/include" />
     </sourceRoots>
     <libraryRoots>
+      <file path="$PROJECT_DIR$/thirdparty/flatbuffers" />
       <file path="$PROJECT_DIR$/thirdparty/glfw" />
       <file path="$PROJECT_DIR$/thirdparty/glm" />
+      <file path="$PROJECT_DIR$/thirdparty/yaml-cpp" />
     </libraryRoots>
     <excludeRoots>
       <file path="$PROJECT_DIR$/build" />

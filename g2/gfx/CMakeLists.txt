@@ -8,5 +8,6 @@ target_sources(g2_gfx PRIVATE
 
 target_include_directories(g2_gfx PUBLIC include)
 target_link_libraries(g2_gfx PRIVATE vulkan)
+target_include_directories(g2_gfx PUBLIC gen )
 
 target_link_libraries(g2_gfx PUBLIC g2_platform glm)

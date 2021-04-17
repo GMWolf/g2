@@ -3,21 +3,33 @@
 //
 
 #include "pipeline.h"
+#include "shader.h"
+#include <fstream>
 
-g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device,
-                                          vk::ShaderModule vertex,
-                                          vk::ShaderModule fragment,
-                                          vk::RenderPass renderPass,
-                                          uint32_t subpass) {
+g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device, const PipelineDef* pipeline_def, vk::RenderPass renderPass, uint32_t subpass) {
+
+
+  std::ifstream vertexInput(pipeline_def->shader()->vertex()->c_str(), std::ios::binary);
+  std::vector<char> vertexBytes((std::istreambuf_iterator<char>(vertexInput)),
+                                (std::istreambuf_iterator<char>()));
+
+  std::ifstream fragmentInput(pipeline_def->shader()->fragment()->c_str(), std::ios::binary);
+  std::vector<char> fragmentBytes((std::istreambuf_iterator<char>(fragmentInput)),
+                                (std::istreambuf_iterator<char>()));
+
+  vk::ShaderModule vertexModule = createShaderModule(device, vertexBytes);
+  vk::ShaderModule fragmentModule = createShaderModule(device, fragmentBytes);
+
+
   vk::PipelineShaderStageCreateInfo vertShaderStage{
       .stage = vk::ShaderStageFlagBits::eVertex,
-      .module = vertex,
+      .module = vertexModule,
       .pName = "main",
   };
 
   vk::PipelineShaderStageCreateInfo fragShaderStage{
       .stage = vk::ShaderStageFlagBits::eFragment,
-      .module = fragment,
+      .module = fragmentModule,
       .pName = "main",
   };
 
@@ -142,11 +154,14 @@ g2::gfx::Pipeline g2::gfx::createPipeline(vk::Device device,
 
   auto pipelineResult = device.createGraphicsPipeline({}, pipelineInfo);
 
+  device.destroyShaderModule(vertexModule);
+  device.destroyShaderModule(fragmentModule);
+
   if (pipelineResult.result != vk::Result::eSuccess) {
     return {};
   }
 
-  return Pipeline{
+  return Pipeline {
       .pipeline = pipelineResult.value,
       .pipelineLayout = pipelineLayout,
   };

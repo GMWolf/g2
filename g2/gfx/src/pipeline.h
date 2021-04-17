@@ -6,6 +6,7 @@
 #define G2_PIPELINE_H
 
 #include "vk.h"
+#include "g2/gfx/pipeline_generated.h"
 
 namespace g2::gfx {
 
@@ -16,8 +17,6 @@ struct Pipeline {
   inline operator bool() const { return pipeline; }
 };
 
-Pipeline createPipeline(vk::Device device, vk::ShaderModule vertex,
-                        vk::ShaderModule fragment, vk::RenderPass renderPass,
-                        uint32_t subpass);
+Pipeline createPipeline(vk::Device device, const PipelineDef* pipelineDef, vk::RenderPass renderPass, uint32_t subpass);
 }  // namespace g2::gfx
 #endif  // G2_PIPELINE_H

@@ -1,0 +1,17 @@
+{
+  "shaderSrc" : {
+    "vertex" : "vert.spv",
+    "fragment" : "frag.spv"
+  },
+  "blending" : [
+    {
+      "blend_enable" : true,
+      "src_blend_factor": "ONE",
+      "dst_blend_factor": "ZERO",
+      "color_blend_op": "ADD",
+      "src_alpha_factor": "ONE",
+      "dst_alpha_factor": "ZERO",
+      "alpha_blend_op": "ADD"
+    }
+  ]
+}
