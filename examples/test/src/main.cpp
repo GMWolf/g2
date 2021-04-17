@@ -26,10 +26,16 @@ int main()
   auto gfx = g2::gfx::Instance(gfxConfig);
 
   std::ifstream pipelineDefInput("pipeline.bin", std::ios::binary);
-  std::vector<char> vertexBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
+  std::vector<char> pipelineBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
                                 (std::istreambuf_iterator<char>()));
 
-  const g2::gfx::Pipeline* pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(vertexBytes.data()));
+  const g2::gfx::Pipeline* pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
+
+  std::ifstream pipelineDefInput2("pipeline2.bin", std::ios::binary);
+  std::vector<char> pipelineBytes2((std::istreambuf_iterator<char>(pipelineDefInput2)),
+                                (std::istreambuf_iterator<char>()));
+
+  const g2::gfx::Pipeline* pipeline2 = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes2.data()));
 
   while(!app.shouldClose()) {
     app.pollEvents();
@@ -38,6 +44,8 @@ int main()
     if (gfx.beginFrame()) {
       auto encoder = gfx.beginRenderpass();
       encoder.bind_pipeline(pipeline);
+      encoder.draw(3, 1, 0, 0);
+      encoder.bind_pipeline(pipeline2);
       encoder.draw(3, 1, 0, 0);
       gfx.endRenderpass(encoder);
       gfx.endFrame();
