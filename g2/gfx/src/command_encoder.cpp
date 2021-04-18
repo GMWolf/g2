@@ -5,7 +5,7 @@
 #include <g2/command_encoder.h>
 
 #include "pipeline.h"
-#include "vk.h"
+#include "volk.h"
 
 static_assert(sizeof(g2::gfx::CommandEncoder::cmdbuf) == sizeof(VkCommandBuffer));
 
