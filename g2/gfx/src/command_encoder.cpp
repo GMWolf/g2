@@ -7,17 +7,17 @@
 #include "pipeline.h"
 #include "vk.h"
 
-static_assert(sizeof(g2::gfx::CommandEncoder::cmdbuf) == sizeof(vk::CommandBuffer));
+static_assert(sizeof(g2::gfx::CommandEncoder::cmdbuf) == sizeof(VkCommandBuffer));
 
 void g2::gfx::CommandEncoder::bind_pipeline(const g2::gfx::Pipeline *pipeline) {
-  vk::CommandBuffer& cmd = *reinterpret_cast<vk::CommandBuffer*>(&cmdbuf);
-  cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->pipeline);
+  auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
+  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 }
 
 void g2::gfx::CommandEncoder::draw(uint32_t vertexCount, uint32_t instanceCount,
                                   uint32_t firstVertex,
                                   uint32_t firstInstance) {
-  vk::CommandBuffer& cmd = *reinterpret_cast<vk::CommandBuffer*>(&cmdbuf);
-  cmd.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+  auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
+  vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 

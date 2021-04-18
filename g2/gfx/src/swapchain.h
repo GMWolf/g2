@@ -11,29 +11,29 @@
 #include "vk.h"
 namespace g2::gfx {
 struct SwapChainSupportDetails {
-  vk::SurfaceCapabilitiesKHR capabilities;
-  std::vector<vk::SurfaceFormatKHR> formats;
-  std::vector<vk::PresentModeKHR> presentModes;
+  VkSurfaceCapabilitiesKHR capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> presentModes;
 };
 
 struct SwapChain {
-  vk::SwapchainKHR swapchain;
-  std::vector<vk::Image> images;
-  std::vector<vk::ImageView> imageViews;
-  vk::Format format;
-  vk::Extent2D extent;
+  VkSwapchainKHR swapchain;
+  std::vector<VkImage> images;
+  std::vector<VkImageView> imageViews;
+  VkFormat format;
+  VkExtent2D extent;
 
   inline operator bool() const { return swapchain; }
-  void shutdown(vk::Device device);
+  void shutdown(VkDevice device);
 };
 
-SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device,
-                                              vk::SurfaceKHR surface);
+SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device,
+                                              VkSurfaceKHR surface);
 
 bool checkSwapChainAdequate(const SwapChainSupportDetails &swapChainSupport);
 
-SwapChain createSwapChain(vk::Device device, vk::PhysicalDevice physicalDevice,
-                          vk::SurfaceKHR surface, vk::Extent2D windowExtent,
+SwapChain createSwapChain(VkDevice device, VkPhysicalDevice physicalDevice,
+                          VkSurfaceKHR surface, VkExtent2D windowExtent,
                           QueueFamilyIndices familyIndices);
 }  // namespace g2::gfx
 

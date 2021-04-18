@@ -9,9 +9,9 @@
 #include <span>
 
 namespace g2::gfx {
-vk::RenderPass createRenderPass(vk::Device device, vk::Format imageFormat);
+VkRenderPass createRenderPass(VkDevice device, VkFormat imageFormat);
 
-vk::RenderPass createCompatibilityRenderPass(vk::Device device, std::span<vk::Format> imageFormats);
+VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats);
 
 }
 

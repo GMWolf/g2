@@ -11,12 +11,12 @@
 namespace g2::gfx {
 
 struct Pipeline {
-  vk::Pipeline pipeline{};
-  vk::PipelineLayout pipelineLayout{};
+  VkPipeline pipeline{};
+  VkPipelineLayout pipelineLayout{};
 
   inline operator bool() const { return pipeline; }
 };
 
-Pipeline createPipeline(vk::Device device, const PipelineDef* pipelineDef, vk::Format displayFormat);
+Pipeline createPipeline(VkDevice device, const PipelineDef* pipelineDef, VkFormat displayFormat);
 }  // namespace g2::gfx
 #endif  // G2_PIPELINE_H

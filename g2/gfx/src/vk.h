@@ -5,8 +5,6 @@
 #ifndef G2_VK_H
 #define G2_VK_H
 
-#define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-#include <vulkan/vulkan.hpp>
+#include <volk.h>
 
 #endif  // G2_VK_H

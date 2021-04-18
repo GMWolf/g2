@@ -18,11 +18,11 @@ struct QueueFamilyIndices {
   std::optional<uint32_t> transfer{};
 };
 
-std::optional<vk::PhysicalDevice> pickPhysicalDevice(vk::Instance instance,
-                                                     vk::SurfaceKHR surface);
+std::optional<VkPhysicalDevice> pickPhysicalDevice(VkInstance instance,
+                                                     VkSurfaceKHR surface);
 
-std::optional<std::pair<vk::Device, QueueFamilyIndices>> createDevice(
-    vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface);
+std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
+    VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 }  // namespace g2::gfx
 

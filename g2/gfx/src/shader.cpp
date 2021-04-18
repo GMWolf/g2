@@ -4,17 +4,17 @@
 
 #include "shader.h"
 
-vk::ShaderModule g2::gfx::createShaderModule(vk::Device device,
-                                             std::span<char> code) {
-  vk::ShaderModuleCreateInfo createInfo{
+VkShaderModule g2::gfx::createShaderModule(VkDevice device, std::span<char> code) {
+  VkShaderModuleCreateInfo createInfo{
+      .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
       .codeSize = code.size_bytes(),
       .pCode = reinterpret_cast<uint32_t *>(code.data()),
   };
 
-  auto result = device.createShaderModule(createInfo);
-  if (result.result != vk::Result::eSuccess) {
-    return {};
+  VkShaderModule shader_module;
+  if(vkCreateShaderModule(device, &createInfo, nullptr, &shader_module) != VK_SUCCESS){
+    return VK_NULL_HANDLE;
   }
 
-  return result.value;
+  return shader_module;
 }

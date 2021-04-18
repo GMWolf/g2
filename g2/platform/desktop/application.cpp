@@ -61,8 +61,7 @@ void Application::pollEvents() const { glfwPollEvents(); }
 
 VkSurfaceKHR Application::createSurface(VkInstance instance) {
   VkSurfaceKHR surface{};
-  VkResult result =
-      glfwCreateWindowSurface(instance, pImpl->window, nullptr, &surface);
+  glfwCreateWindowSurface(instance, pImpl->window, nullptr, &surface);
   return surface;
 }
 

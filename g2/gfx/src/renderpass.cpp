@@ -3,42 +3,44 @@
 //
 
 #include "renderpass.h"
+#include <vector>
 
 namespace g2::gfx {
 
-vk::RenderPass createRenderPass(vk::Device device, vk::Format imageFormat) {
-  vk::AttachmentDescription colorAttachment{
+VkRenderPass createRenderPass(VkDevice device, VkFormat imageFormat) {
+  VkAttachmentDescription colorAttachment{
       .format = imageFormat,
-      .samples = vk::SampleCountFlagBits::e1,
-      .loadOp = vk::AttachmentLoadOp::eClear,
-      .storeOp = vk::AttachmentStoreOp::eStore,
-      .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-      .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-      .initialLayout = vk::ImageLayout::eUndefined,
-      .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
   };
 
-  vk::AttachmentReference colorAttachmentRef{
+  VkAttachmentReference colorAttachmentRef{
       .attachment = 0,
-      .layout = vk::ImageLayout::eColorAttachmentOptimal,
+      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
   };
 
-  vk::SubpassDescription subpass{
-      .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+  VkSubpassDescription subpass{
+      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
       .colorAttachmentCount = 1,
       .pColorAttachments = &colorAttachmentRef,
   };
 
-  vk::SubpassDependency dependency{
+  VkSubpassDependency dependency{
       .srcSubpass = VK_SUBPASS_EXTERNAL,
       .dstSubpass = 0,
-      .srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      .dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
       .srcAccessMask = {},
-      .dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
+      .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
   };
 
-  vk::RenderPassCreateInfo renderPassCreateInfo{
+  VkRenderPassCreateInfo renderPassCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
       .attachmentCount = 1,
       .pAttachments = &colorAttachment,
       .subpassCount = 1,
@@ -47,46 +49,48 @@ vk::RenderPass createRenderPass(vk::Device device, vk::Format imageFormat) {
       .pDependencies = &dependency,
   };
 
-  auto renderPassResult = device.createRenderPass(renderPassCreateInfo);
-
-  if (renderPassResult.result != vk::Result::eSuccess) {
-    return {};
+  VkRenderPass render_pass;
+  if(vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &render_pass) != VK_SUCCESS)
+  {
+    return VK_NULL_HANDLE;
   }
 
-  return renderPassResult.value;
+  return render_pass;
 }
-vk::RenderPass createCompatibilityRenderPass(vk::Device device, std::span<vk::Format> imageFormats) {
 
-  std::vector<vk::AttachmentDescription> attachments;
+VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats) {
+
+  std::vector<VkAttachmentDescription> attachments;
   attachments.reserve(imageFormats.size());
 
-  for(vk::Format format : imageFormats) {
-    vk::AttachmentDescription attachment{
+  for(VkFormat format : imageFormats) {
+    VkAttachmentDescription attachment{
         .format = format,
-        .samples = vk::SampleCountFlagBits::e1,
-        .loadOp = vk::AttachmentLoadOp::eDontCare,
-        .storeOp = vk::AttachmentStoreOp::eDontCare,
-        .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-        .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-        .initialLayout = vk::ImageLayout::eUndefined,
-        .finalLayout = vk::ImageLayout::ePresentSrcKHR,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     };
 
     attachments.push_back(attachment);
   }
 
-  vk::AttachmentReference colorAttachmentRef{
+  VkAttachmentReference colorAttachmentRef{
       .attachment = 0,
-      .layout = vk::ImageLayout::eColorAttachmentOptimal,
+      .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
   };
 
-  vk::SubpassDescription subpass {
-      .pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+  VkSubpassDescription subpass {
+      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
       .colorAttachmentCount = 1,
       .pColorAttachments = &colorAttachmentRef,
   };
 
-  vk::RenderPassCreateInfo renderPassCreateInfo{
+  VkRenderPassCreateInfo renderPassCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
       .attachmentCount = static_cast<uint32_t>(attachments.size()),
       .pAttachments = attachments.data(),
       .subpassCount = 1,
@@ -95,13 +99,13 @@ vk::RenderPass createCompatibilityRenderPass(vk::Device device, std::span<vk::Fo
       .pDependencies = nullptr,
   };
 
-  auto renderPassResult = device.createRenderPass(renderPassCreateInfo);
-
-  if (renderPassResult.result != vk::Result::eSuccess) {
-    return {};
+  VkRenderPass render_pass;
+  if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &render_pass) != VK_SUCCESS)
+  {
+    return VK_NULL_HANDLE;
   }
 
-  return renderPassResult.value;
+  return render_pass;
 
 }
 }  // namespace g2::gfx

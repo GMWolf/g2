@@ -10,6 +10,7 @@
 
 #include "swapchain.h"
 #include "validation.h"
+#include <cstring>
 
 namespace g2::gfx {
 
@@ -17,24 +18,31 @@ static std::array<const char *, 1> deviceExtensions{
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 static QueueFamilyIndices findQueueFamilies(
-    const vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface) {
+    const VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
   QueueFamilyIndices indices{};
 
-  auto queueFamilies = physicalDevice.getQueueFamilyProperties();
+
+  uint32_t queueFamilyPropsCount;
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropsCount, nullptr);
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyPropsCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropsCount, queueFamilies.data());
 
   for (int index = 0; index < queueFamilies.size(); index++) {
     const auto &queueFamily = queueFamilies[index];
-    if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       indices.graphics = index;
     }
-    if (physicalDevice.getSurfaceSupportKHR(index, surface).value) {
+
+    VkBool32 surfaceSupported;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &surfaceSupported);
+    if(surfaceSupported) {
       indices.present = index;
     }
 
-    if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) {
+    if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
       indices.compute = index;
     }
-    if (queueFamily.queueFlags & vk::QueueFlagBits::eTransfer) {
+    if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
       indices.transfer = index;
     }
   }
@@ -42,12 +50,16 @@ static QueueFamilyIndices findQueueFamilies(
   return indices;
 }
 
-static bool checkDeviceExtensionSupport(vk::PhysicalDevice device) {
-  auto [result, extensions] = device.enumerateDeviceExtensionProperties();
+static bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+  std::vector<VkExtensionProperties> extensions(extensionCount);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
 
   for (const auto &extension : deviceExtensions) {
     if (std::find_if(extensions.begin(), extensions.end(),
-                     [=](vk::ExtensionProperties &ext) {
+                     [=](const VkExtensionProperties &ext) {
                        return strcmp(ext.extensionName, extension);
                      }) == extensions.end()) {
       return false;
@@ -57,8 +69,8 @@ static bool checkDeviceExtensionSupport(vk::PhysicalDevice device) {
   return true;
 }
 
-static bool isDeviceSuitable(vk::PhysicalDevice device,
-                             vk::SurfaceKHR surface) {
+static bool isDeviceSuitable(VkPhysicalDevice device,
+                             VkSurfaceKHR surface) {
   // vk::PhysicalDeviceProperties properties = device.getProperties();
   // vk::PhysicalDeviceFeatures features = device.getFeatures();
 
@@ -77,14 +89,18 @@ static bool isDeviceSuitable(vk::PhysicalDevice device,
   return indicesComplete && extensionsSupported && swapChainAdequate;
 }
 
-std::optional<vk::PhysicalDevice> pickPhysicalDevice(vk::Instance instance,
-                                                     vk::SurfaceKHR surface) {
-  auto [result, devices] = instance.enumeratePhysicalDevices();
-  if (result != vk::Result::eSuccess) {
+std::optional<VkPhysicalDevice> pickPhysicalDevice(VkInstance instance,
+                                                     VkSurfaceKHR surface) {
+
+  uint32_t physicalDeviceCount;
+  vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
+
+  if (physicalDeviceCount == 0){
     return {};
   }
 
-  if (devices.empty()) {
+  std::vector<VkPhysicalDevice> devices(physicalDeviceCount);
+  if(vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, devices.data()) != VK_SUCCESS){
     return {};
   }
 
@@ -97,8 +113,8 @@ std::optional<vk::PhysicalDevice> pickPhysicalDevice(vk::Instance instance,
   return {};
 }
 
-std::optional<std::pair<vk::Device, QueueFamilyIndices>> createDevice(
-    vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface) {
+std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
+    VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
   QueueFamilyIndices queueFamilies = findQueueFamilies(physicalDevice, surface);
 
   float queuePriority = 1.0f;
@@ -110,11 +126,12 @@ std::optional<std::pair<vk::Device, QueueFamilyIndices>> createDevice(
   auto end =
       std::unique(uniqueQueueFamilies.begin(), uniqueQueueFamilies.end());
 
-  vk::DeviceQueueCreateInfo queueCreateInfos[2];
+  VkDeviceQueueCreateInfo queueCreateInfos[2];
 
   uint32_t queueCount = 0;
   for (auto queueIndex : std::span{uniqueQueueFamilies.begin(), end}) {
-    queueCreateInfos[queueCount] = vk::DeviceQueueCreateInfo{
+    queueCreateInfos[queueCount] = VkDeviceQueueCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .queueFamilyIndex = queueIndex,
         .queueCount = 1,
         .pQueuePriorities = &queuePriority,
@@ -122,11 +139,12 @@ std::optional<std::pair<vk::Device, QueueFamilyIndices>> createDevice(
     queueCount++;
   }
 
-  vk::PhysicalDeviceFeatures deviceFeatures{};
+  VkPhysicalDeviceFeatures deviceFeatures{};
 
   auto validationLayers = getValidationLayerNames();
 
-  vk::DeviceCreateInfo deviceCreateInfo{
+  VkDeviceCreateInfo deviceCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .queueCreateInfoCount = queueCount,
       .pQueueCreateInfos = queueCreateInfos,
       .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
@@ -136,11 +154,13 @@ std::optional<std::pair<vk::Device, QueueFamilyIndices>> createDevice(
       .pEnabledFeatures = &deviceFeatures,
   };
 
-  auto [result, device] = physicalDevice.createDevice(deviceCreateInfo);
 
-  if (result != vk::Result::eSuccess) {
+  VkDevice device;
+  if(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
     return {};
   }
+
+  volkLoadDevice(device);
 
   return std::make_pair(device, queueFamilies);
 }
