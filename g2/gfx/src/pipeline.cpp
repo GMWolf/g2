@@ -10,34 +10,31 @@
 g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_def, VkFormat displayFormat) {
 
 
-  std::ifstream vertexInput(pipeline_def->shader()->vertex()->c_str(), std::ios::binary);
-  std::vector<char> vertexBytes((std::istreambuf_iterator<char>(vertexInput)),
-                                (std::istreambuf_iterator<char>()));
+  size_t moduleCount = pipeline_def->modules()->size();
 
-  std::ifstream fragmentInput(pipeline_def->shader()->fragment()->c_str(), std::ios::binary);
-  std::vector<char> fragmentBytes((std::istreambuf_iterator<char>(fragmentInput)),
-                                (std::istreambuf_iterator<char>()));
+  const size_t maxModules = 5;
+  assert(moduleCount <= maxModules);
 
-  VkShaderModule vertexModule = createShaderModule(device, vertexBytes);
-  VkShaderModule fragmentModule = createShaderModule(device, fragmentBytes);
+  VkShaderModule modules[maxModules];
+  for(int i = 0; i < pipeline_def->modules()->size(); i++) {
+    auto text = pipeline_def->modules()->Get(i)->text();
+
+    modules[i] = createShaderModule(device, std::span(text->data(), text->size()));
+  }
+
+  VkPipelineShaderStageCreateInfo shaderStages[maxModules];
+
+  for(int i = 0; i < moduleCount; i++) {
+    shaderStages[i] = VkPipelineShaderStageCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = static_cast<VkShaderStageFlagBits>(pipeline_def->modules()->Get(i)->stage()),
+        .module = modules[i],
+        .pName = "main",
+    };
+  }
 
 
-  VkPipelineShaderStageCreateInfo vertShaderStage{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .stage = VK_SHADER_STAGE_VERTEX_BIT,
-      .module = vertexModule,
-      .pName = "main",
-  };
 
-  VkPipelineShaderStageCreateInfo fragShaderStage{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .module = fragmentModule,
-      .pName = "main",
-  };
-
-  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStage,
-                                                      fragShaderStage};
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -184,8 +181,11 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
     return {};
   }
 
-  vkDestroyShaderModule(device, vertexModule, nullptr);
-  vkDestroyShaderModule(device, fragmentModule, nullptr);
+
+  for(int i = 0; i < moduleCount; i++) {
+    vkDestroyShaderModule(device, modules[i], nullptr);
+  }
+
   vkDestroyRenderPass(device, render_pass, nullptr);
 
   return Pipeline {

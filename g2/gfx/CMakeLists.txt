@@ -1,3 +1,8 @@
+
+add_library(g2_gfx_fbs INTERFACE)
+target_include_directories(g2_gfx_fbs INTERFACE gen)
+
+
 add_library(g2_gfx
         include/g2/gfx_instance.h
         src/validation.h
@@ -16,12 +21,9 @@ add_library(g2_gfx
         src/command_encoder.cpp)
 
 target_sources(g2_gfx PRIVATE
-        src/vk.h
         src/gfx_instance.cpp
         src/validation.cpp)
 
 target_include_directories(g2_gfx PUBLIC include)
 target_link_libraries(g2_gfx PRIVATE volk)
-target_include_directories(g2_gfx PUBLIC gen )
-
-target_link_libraries(g2_gfx PUBLIC g2_platform glm)
+target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs)

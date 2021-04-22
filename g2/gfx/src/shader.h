@@ -12,7 +12,7 @@
 
 namespace g2::gfx {
 
-VkShaderModule createShaderModule(VkDevice device, std::span<char> code);
+VkShaderModule createShaderModule(VkDevice device, std::span<const uint32_t> code);
 
 }
 

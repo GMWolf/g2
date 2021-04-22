@@ -3,7 +3,7 @@
 //
 
 #include <g2/application.h>
-#include <vulkan/vulkan.h>
+#include <volk.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -23,7 +23,6 @@ static void glfwErrorCallback(int error, const char *description) {
 
 static bool initialize_glfw() {
   glfwSetErrorCallback(glfwErrorCallback);
-
   return glfwInit();
 }
 

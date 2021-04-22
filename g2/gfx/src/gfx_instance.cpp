@@ -128,13 +128,14 @@ static void createFrameBuffers(VkDevice device, std::span<VkFramebuffer> framebu
   }
 }
 
-
-Instance::Instance(const InstanceConfig &config) {
-
+void init() {
   if(volkInitialize() != VK_SUCCESS) {
     std::cerr << "Failed to initialize volk\n";
-    return;
   }
+}
+
+
+Instance::Instance(const InstanceConfig &config) {
 
   pImpl = std::make_unique<Impl>();
 

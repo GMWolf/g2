@@ -15,6 +15,8 @@
 
 namespace g2::gfx {
 
+void init();
+
 struct InstanceConfig {
   Application *application;
   std::span<const char *> vkExtensions;

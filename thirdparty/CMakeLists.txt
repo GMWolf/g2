@@ -3,8 +3,35 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_USE_WAYLAND OFF CACHE BOOL "" FORCE)
 set(GLFW_VULKAN_STATIC OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 add_subdirectory(glfw)
 
 add_subdirectory(glm)
 
 add_subdirectory(volk)
+
+
+add_subdirectory(SPIRV-Headers)
+
+set(SPIRV_SKIP_EXECUTABLES ON)
+add_subdirectory(SPIRV-Tools)
+
+
+set(SPIRV_CROSS_ENABLE_C_API OFF)
+set(SPIRV_CROSS_ENABLE_MSL OFF)
+set(SPIRV_CROSS_ENABLE_TESTS OFF)
+set(SPIRV_CROSS_CLI OFF)
+add_subdirectory(SPIRV-Cross)
+
+set(ENABLE_SPVREMAPPER OFF)
+set(ENABLE_GLSLANG_BINARIES OFF)
+set(ENABLE_GLSLANG_JS OFF)
+set(ENABLE_OPT OFF)
+set(ENABLE_CTEST OFF)
+add_subdirectory(glslang)
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+add_subdirectory(shaderc)
+
+
+add_library(rapidjson INTERFACE)
+target_include_directories(rapidjson INTERFACE rapidjson/include)

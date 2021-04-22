@@ -16,6 +16,8 @@ int main()
       .title = "Application"
   };
 
+  g2::gfx::init();
+
   auto app = g2::Application(appConfig);
 
   g2::gfx::InstanceConfig gfxConfig{
@@ -25,13 +27,13 @@ int main()
 
   auto gfx = g2::gfx::Instance(gfxConfig);
 
-  std::ifstream pipelineDefInput("pipeline.bin", std::ios::binary);
+  std::ifstream pipelineDefInput("pipeline.json.bin", std::ios::binary);
   std::vector<char> pipelineBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
                                 (std::istreambuf_iterator<char>()));
 
   const g2::gfx::Pipeline* pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
-  std::ifstream pipelineDefInput2("pipeline2.bin", std::ios::binary);
+  std::ifstream pipelineDefInput2("pipeline2.json.bin", std::ios::binary);
   std::vector<char> pipelineBytes2((std::istreambuf_iterator<char>(pipelineDefInput2)),
                                 (std::istreambuf_iterator<char>()));
 

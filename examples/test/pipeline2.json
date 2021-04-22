@@ -1,7 +1,7 @@
 {
   "shader" : {
-    "vertex" : "vert2.spv",
-    "fragment" : "frag.spv"
+    "vertex" : "src/shader2.vert",
+    "fragment" : "src/shader.frag"
   },
   "blending" : [
     {

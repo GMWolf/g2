@@ -10,11 +10,22 @@
       <file path="$PROJECT_DIR$/g2/gfx/src" />
       <file path="$PROJECT_DIR$/g2/platform/desktop" />
       <file path="$PROJECT_DIR$/g2/platform/include" />
+      <file path="$PROJECT_DIR$/g2/shader_compiler/flatbufferschemas" />
+      <file path="$PROJECT_DIR$/g2/shader_compiler/gen" />
+      <file path="$PROJECT_DIR$/g2/shader_compiler/src" />
+      <file path="$PROJECT_DIR$/g2/util/include" />
+      <file path="$PROJECT_DIR$/g2/util/src" />
     </sourceRoots>
     <libraryRoots>
+      <file path="$PROJECT_DIR$/thirdparty/SPIRV-Cross" />
+      <file path="$PROJECT_DIR$/thirdparty/SPIRV-Headers" />
+      <file path="$PROJECT_DIR$/thirdparty/SPIRV-Tools" />
       <file path="$PROJECT_DIR$/thirdparty/flatbuffers" />
       <file path="$PROJECT_DIR$/thirdparty/glfw" />
       <file path="$PROJECT_DIR$/thirdparty/glm" />
+      <file path="$PROJECT_DIR$/thirdparty/glslang" />
+      <file path="$PROJECT_DIR$/thirdparty/rapidjson" />
+      <file path="$PROJECT_DIR$/thirdparty/shaderc" />
       <file path="$PROJECT_DIR$/thirdparty/volk" />
       <file path="$PROJECT_DIR$/thirdparty/yaml-cpp" />
     </libraryRoots>

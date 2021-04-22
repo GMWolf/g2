@@ -4,11 +4,11 @@
 
 #include "shader.h"
 
-VkShaderModule g2::gfx::createShaderModule(VkDevice device, std::span<char> code) {
+VkShaderModule g2::gfx::createShaderModule(VkDevice device, std::span<const uint32_t> code) {
   VkShaderModuleCreateInfo createInfo{
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
       .codeSize = code.size_bytes(),
-      .pCode = reinterpret_cast<uint32_t *>(code.data()),
+      .pCode = code.data(),
   };
 
   VkShaderModule shader_module;

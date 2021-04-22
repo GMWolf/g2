@@ -10,3 +10,21 @@
 [submodule "thirdparty/volk"]
 	path = thirdparty/volk
 	url = git@github.com:zeux/volk.git
+[submodule "thirdparty/shaderc"]
+	path = thirdparty/shaderc
+	url = git@github.com:google/shaderc.git
+[submodule "thirdparty/SPIRV-Cross"]
+	path = thirdparty/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross
+[submodule "thirdparty/SPIRV-Tools"]
+	path = thirdparty/SPIRV-Tools
+	url = git@github.com:KhronosGroup/SPIRV-Tools.git
+[submodule "thirdparty/SPIRV-Headers"]
+	path = thirdparty/SPIRV-Headers
+	url = git@github.com:KhronosGroup/SPIRV-Headers.git
+[submodule "thirdparty/glslang"]
+	path = thirdparty/glslang
+	url = git@github.com:KhronosGroup/glslang.git
+[submodule "thirdparty/rapidjson"]
+	path = thirdparty/rapidjson
+	url = git@github.com:Tencent/rapidjson.git
