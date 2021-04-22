@@ -5,7 +5,7 @@
   },
   "blending" : [
     {
-      "blend_enable" : true,
+      "blend_enable" : false,
       "src_blend_factor": "one",
       "dst_blend_factor": "zero",
       "color_blend_op": "add",

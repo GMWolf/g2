@@ -34,8 +34,6 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
   }
 
 
-
-
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
       .vertexBindingDescriptionCount = 0,
@@ -96,25 +94,35 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
       .alphaToOneEnable = false,
   };
 
-  VkPipelineColorBlendAttachmentState colorBlendAttachment{
-      .blendEnable = false,
-      .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-      .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-      .colorBlendOp = VK_BLEND_OP_ADD,
-      .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-      .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-      .alphaBlendOp = VK_BLEND_OP_ADD,
-      .colorWriteMask =
-         VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT |
-             VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
-  };
+  const size_t maxBlendAttachments = 10;
+  assert(pipeline_def->blending()->size() < maxBlendAttachments);
+  VkPipelineColorBlendAttachmentState blendAttachments[maxBlendAttachments];
+
+  for(int i = 0; i < pipeline_def->blending()->size(); i++) {
+    auto blend = pipeline_def->blending()->Get(i);
+    blendAttachments[i] = VkPipelineColorBlendAttachmentState{
+        .blendEnable = blend->blend_enable(),
+        .srcColorBlendFactor =
+            static_cast<VkBlendFactor>(blend->src_blend_factor()),
+        .dstColorBlendFactor =
+            static_cast<VkBlendFactor>(blend->dst_blend_factor()),
+        .colorBlendOp = static_cast<VkBlendOp>(blend->color_blend_op()),
+        .srcAlphaBlendFactor =
+            static_cast<VkBlendFactor>(blend->src_alpha_factor()),
+        .dstAlphaBlendFactor =
+            static_cast<VkBlendFactor>(blend->dst_alpha_factor()),
+        .alphaBlendOp = static_cast<VkBlendOp>(blend->alpha_blend_op()),
+        .colorWriteMask = VK_COLOR_COMPONENT_A_BIT | VK_COLOR_COMPONENT_R_BIT |
+                          VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT,
+    };
+  }
 
   VkPipelineColorBlendStateCreateInfo colorBlending{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
       .logicOpEnable = false,
       .logicOp = VK_LOGIC_OP_COPY,
-      .attachmentCount = 1,
-      .pAttachments = &colorBlendAttachment,
+      .attachmentCount = pipeline_def->blending()->size(),
+      .pAttachments = blendAttachments,
   };
 
   VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,
