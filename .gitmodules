@@ -28,3 +28,6 @@
 [submodule "thirdparty/rapidjson"]
 	path = thirdparty/rapidjson
 	url = git@github.com:Tencent/rapidjson.git
+[submodule "thirdparty/VulkanMemoryAllocator"]
+	path = thirdparty/VulkanMemoryAllocator
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

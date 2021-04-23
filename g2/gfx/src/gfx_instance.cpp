@@ -16,7 +16,8 @@
 #include "shader.h"
 #include "swapchain.h"
 #include "validation.h"
-#include "volk.h"
+#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 namespace g2::gfx {
 
@@ -38,6 +39,8 @@ struct Instance::Impl {
   std::vector<std::unique_ptr<Pipeline>> pipelines;
 
   std::vector<VkFramebuffer> frameBuffers;
+
+  VmaAllocator allocator;
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
@@ -128,10 +131,20 @@ static void createFrameBuffers(VkDevice device, std::span<VkFramebuffer> framebu
   }
 }
 
+static VmaAllocator createAllocator(VkDevice device, VkInstance instance, VkPhysicalDevice physical_device) {
+  VmaAllocatorCreateInfo allocatorInfo {
+    .physicalDevice = physical_device,
+    .device = device,
+    .instance = instance,
+    .vulkanApiVersion = VK_API_VERSION_1_2,
+  };
+
+  VmaAllocator allocator;
+  vmaCreateAllocator(&allocatorInfo, &allocator);
+  return allocator;
+}
+
 void init() {
-  if(volkInitialize() != VK_SUCCESS) {
-    std::cerr << "Failed to initialize volk\n";
-  }
 }
 
 
@@ -146,7 +159,6 @@ Instance::Instance(const InstanceConfig &config) {
   pImpl->framebufferExtent = appExtent;
 
   pImpl->vkInstance = createVkInstance(config);
-  volkLoadInstance(pImpl->vkInstance);
 
   pImpl->surface = config.application->createSurface(pImpl->vkInstance);
 
@@ -169,6 +181,10 @@ Instance::Instance(const InstanceConfig &config) {
 
   vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.graphics.value(), 0, &pImpl->graphicsQueue);
   vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.present.value(), 0, &pImpl->presentQueue);
+
+
+  pImpl->allocator = createAllocator(pImpl->vkDevice, pImpl->vkInstance, pImpl->physicalDevice);
+
 
   auto swapChain =
       createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface,
@@ -245,6 +261,8 @@ Instance::~Instance() {
   vkDestroyRenderPass(pImpl->vkDevice, pImpl->renderPass, nullptr);
 
   pImpl->swapChain.shutdown(pImpl->vkDevice);
+
+  vmaDestroyAllocator(pImpl->allocator);
 
   vkDestroyDevice(pImpl->vkDevice, nullptr);
   vkDestroySurfaceKHR(pImpl->vkInstance, pImpl->surface, nullptr);

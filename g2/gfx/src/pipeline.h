@@ -5,7 +5,7 @@
 #ifndef G2_PIPELINE_H
 #define G2_PIPELINE_H
 
-#include "volk.h"
+#include <vulkan/vulkan.h>
 #include "g2/gfx/pipeline_generated.h"
 
 namespace g2::gfx {

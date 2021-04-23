@@ -3,7 +3,7 @@
 //
 
 #include <g2/application.h>
-#include <volk.h>
+#include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 

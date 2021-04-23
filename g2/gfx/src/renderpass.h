@@ -5,7 +5,7 @@
 #ifndef G2_RENDERPASS_H
 #define G2_RENDERPASS_H
 
-#include "volk.h"
+#include <vulkan/vulkan.h>
 #include <span>
 
 namespace g2::gfx {

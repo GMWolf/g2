@@ -7,7 +7,7 @@
 
 #include <optional>
 
-#include "volk.h"
+#include <vulkan/vulkan.h>
 
 namespace g2::gfx {
 

@@ -20,6 +20,7 @@
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Cross" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Headers" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Tools" />
+      <file path="$PROJECT_DIR$/thirdparty/VulkanMemoryAllocator" />
       <file path="$PROJECT_DIR$/thirdparty/flatbuffers" />
       <file path="$PROJECT_DIR$/thirdparty/glfw" />
       <file path="$PROJECT_DIR$/thirdparty/glm" />

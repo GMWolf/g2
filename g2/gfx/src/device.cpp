@@ -160,8 +160,6 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
     return {};
   }
 
-  volkLoadDevice(device);
-
   return std::make_pair(device, queueFamilies);
 }
 
