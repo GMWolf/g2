@@ -3,6 +3,8 @@
 //
 
 #include <g2/gfx_instance.h>
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 #include <glm/glm.hpp>
 #include <iostream>
@@ -11,13 +13,12 @@
 
 #include "device.h"
 #include "fstream"
+#include "mesh.h"
 #include "pipeline.h"
 #include "renderpass.h"
 #include "shader.h"
 #include "swapchain.h"
 #include "validation.h"
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
 
 namespace g2::gfx {
 
@@ -36,11 +37,18 @@ struct Instance::Impl {
 
   VkRenderPass renderPass;
 
-  std::vector<std::unique_ptr<Pipeline>> pipelines;
+  std::vector<VkPipeline> pipelines;
 
   std::vector<VkFramebuffer> frameBuffers;
 
   VmaAllocator allocator;
+
+  VkPipelineLayout gfxPipelineLayout;
+  VkDescriptorPool descriptorPool;
+  VkDescriptorSet descriptorSet;
+
+  MeshBuffer meshBuffer;
+  Mesh mesh;
 
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
@@ -56,7 +64,6 @@ struct Instance::Impl {
 };
 
 static VkInstance createVkInstance(const InstanceConfig &config) {
-
   if (!checkValidationSupport()) {
     std::cerr << "Validation support check failed\n";
     return {};
@@ -83,35 +90,36 @@ static VkInstance createVkInstance(const InstanceConfig &config) {
       .ppEnabledExtensionNames = config.vkExtensions.data(),
   };
 
-
   VkInstance instance;
-  if(vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
     std::cerr << "Failed to create vulkan instance\n";
     return VK_NULL_HANDLE;
   }
-
 
   return instance;
 }
 
 static VkCommandPool createCommandPool(VkDevice device,
-                                         QueueFamilyIndices familyIndices) {
+                                       QueueFamilyIndices familyIndices) {
   VkCommandPoolCreateInfo poolInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT|
+      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
                VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
       .queueFamilyIndex = familyIndices.graphics.value(),
   };
 
   VkCommandPool pool;
-  if(vkCreateCommandPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
+  if (vkCreateCommandPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS) {
     return VK_NULL_HANDLE;
   }
 
   return pool;
 }
 
-static void createFrameBuffers(VkDevice device, std::span<VkFramebuffer> framebuffers, std::span<VkImageView> imageViews, VkExtent2D extent, VkRenderPass renderPass) {
+static void createFrameBuffers(VkDevice device,
+                               std::span<VkFramebuffer> framebuffers,
+                               std::span<VkImageView> imageViews,
+                               VkExtent2D extent, VkRenderPass renderPass) {
   for (size_t i = 0; i < imageViews.size(); i++) {
     VkImageView attachments[] = {imageViews[i]};
 
@@ -125,18 +133,20 @@ static void createFrameBuffers(VkDevice device, std::span<VkFramebuffer> framebu
         .layers = 1,
     };
 
-    if(vkCreateFramebuffer(device, &frameBufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+    if (vkCreateFramebuffer(device, &frameBufferInfo, nullptr,
+                            &framebuffers[i]) != VK_SUCCESS) {
       std::cerr << "Error creating framebuffer\n";
     }
   }
 }
 
-static VmaAllocator createAllocator(VkDevice device, VkInstance instance, VkPhysicalDevice physical_device) {
-  VmaAllocatorCreateInfo allocatorInfo {
-    .physicalDevice = physical_device,
-    .device = device,
-    .instance = instance,
-    .vulkanApiVersion = VK_API_VERSION_1_2,
+static VmaAllocator createAllocator(VkDevice device, VkInstance instance,
+                                    VkPhysicalDevice physical_device) {
+  VmaAllocatorCreateInfo allocatorInfo{
+      .physicalDevice = physical_device,
+      .device = device,
+      .instance = instance,
+      .vulkanApiVersion = VK_API_VERSION_1_2,
   };
 
   VmaAllocator allocator;
@@ -144,17 +154,14 @@ static VmaAllocator createAllocator(VkDevice device, VkInstance instance, VkPhys
   return allocator;
 }
 
-void init() {
-}
-
+void init() {}
 
 Instance::Instance(const InstanceConfig &config) {
-
   pImpl = std::make_unique<Impl>();
 
   glm::ivec2 appSize = config.application->getWindowSize();
   VkExtent2D appExtent{static_cast<uint32_t>(appSize.x),
-                         static_cast<uint32_t>(appSize.y)};
+                       static_cast<uint32_t>(appSize.y)};
 
   pImpl->framebufferExtent = appExtent;
 
@@ -179,12 +186,13 @@ Instance::Instance(const InstanceConfig &config) {
   pImpl->vkDevice = deviceResult.value().first;
   QueueFamilyIndices queueFamilyIndices = deviceResult.value().second;
 
-  vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.graphics.value(), 0, &pImpl->graphicsQueue);
-  vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.present.value(), 0, &pImpl->presentQueue);
+  vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.graphics.value(), 0,
+                   &pImpl->graphicsQueue);
+  vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.present.value(), 0,
+                   &pImpl->presentQueue);
 
-
-  pImpl->allocator = createAllocator(pImpl->vkDevice, pImpl->vkInstance, pImpl->physicalDevice);
-
+  pImpl->allocator = createAllocator(pImpl->vkDevice, pImpl->vkInstance,
+                                     pImpl->physicalDevice);
 
   auto swapChain =
       createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface,
@@ -198,10 +206,10 @@ Instance::Instance(const InstanceConfig &config) {
 
   pImpl->renderPass = createRenderPass(pImpl->vkDevice, swapChain.format);
 
-
   // Create framebuffers
   pImpl->frameBuffers.resize(swapChain.imageViews.size());
-  createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews, swapChain.extent, pImpl->renderPass);
+  createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews,
+                     swapChain.extent, pImpl->renderPass);
 
   pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
 
@@ -213,7 +221,8 @@ Instance::Instance(const InstanceConfig &config) {
   };
 
   pImpl->commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-  if(vkAllocateCommandBuffers(pImpl->vkDevice, &allocInfo, pImpl->commandBuffers.data()) != VK_SUCCESS) {
+  if (vkAllocateCommandBuffers(pImpl->vkDevice, &allocInfo,
+                               pImpl->commandBuffers.data()) != VK_SUCCESS) {
     std::cerr << "failed to alloc command buffers\n";
     return;
   }
@@ -222,27 +231,161 @@ Instance::Instance(const InstanceConfig &config) {
   VkSemaphoreCreateInfo semaphoreInfo{
       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
   };
-  VkFenceCreateInfo fenceInfo{
-      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-      .flags = VK_FENCE_CREATE_SIGNALED_BIT
-  };
+  VkFenceCreateInfo fenceInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                              .flags = VK_FENCE_CREATE_SIGNALED_BIT};
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr, &pImpl->imageAvailableSemaphores[i]);
-    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr, &pImpl->renderFinishedSemaphores[i]);
-    vkCreateFence(pImpl->vkDevice, &fenceInfo, nullptr, &pImpl->inFlightFences[i]);
+    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr,
+                      &pImpl->imageAvailableSemaphores[i]);
+    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr,
+                      &pImpl->renderFinishedSemaphores[i]);
+    vkCreateFence(pImpl->vkDevice, &fenceInfo, nullptr,
+                  &pImpl->inFlightFences[i]);
   }
 
   pImpl->imagesInFlight.resize(pImpl->swapChain.images.size());
+
+  // create gfx pipeline layout
+
+  VkDescriptorSetLayoutBinding vertexBinding{
+      .binding = 0,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      .descriptorCount = 1,
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+      .pImmutableSamplers = nullptr,
+  };
+
+  VkDescriptorSetLayout descriptorSetLayout;
+  VkDescriptorSetLayoutCreateInfo layoutInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      .bindingCount = 1,
+      .pBindings = &vertexBinding,
+  };
+
+  vkCreateDescriptorSetLayout(pImpl->vkDevice, &layoutInfo, nullptr,
+                              &descriptorSetLayout);
+
+  VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+      .setLayoutCount = 1,
+      .pSetLayouts = &descriptorSetLayout,
+      .pushConstantRangeCount = 0,
+      .pPushConstantRanges = nullptr,
+  };
+
+  VkPipelineLayout pipeline_layout;
+  if (vkCreatePipelineLayout(pImpl->vkDevice, &pipelineLayoutCreateInfo,
+                             nullptr, &pImpl->gfxPipelineLayout)) {
+  }
+
+  VkDescriptorPoolSize poolSize{
+      .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      .descriptorCount = 1,
+  };
+
+  VkDescriptorPoolCreateInfo poolInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .maxSets = 1,
+      .poolSizeCount = 1,
+      .pPoolSizes = &poolSize,
+  };
+
+  vkCreateDescriptorPool(pImpl->vkDevice, &poolInfo, nullptr,
+                         &pImpl->descriptorPool);
+
+  VkDescriptorSetAllocateInfo descriptorSetAllocInfo{
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+      .descriptorPool = pImpl->descriptorPool,
+      .descriptorSetCount = 1,
+      .pSetLayouts = &descriptorSetLayout
+  };
+
+  vkAllocateDescriptorSets(pImpl->vkDevice, &descriptorSetAllocInfo, &pImpl->descriptorSet);
+
+  initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
+
+  {
+    //update set
+
+    VkDescriptorBufferInfo bufferInfo {
+        .buffer = pImpl->meshBuffer.vertexBuffer.buffer,
+        .offset = 0,
+        .range = pImpl->meshBuffer.vertexBuffer.size,
+    };
+
+    VkWriteDescriptorSet descriptorWrite {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = pImpl->descriptorSet,
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .pImageInfo = nullptr,
+        .pBufferInfo = &bufferInfo,
+        .pTexelBufferView = nullptr,
+    };
+
+    vkUpdateDescriptorSets(pImpl->vkDevice, 1, &descriptorWrite, 0, nullptr);
+  }
+
+  // Add some mesh data
+  {
+    struct Vertex {
+      float x, y, z, w;
+      float r, g, b, a;
+    } vertices[]{
+        {0.0, -0.5, 0, 1, 1, 0, 1, 1},
+        {0.5, 0.5, 0, 1, 1, 1, 0, 1},
+        {-0.5, 0.5, 0, 1, 0, 1, 1},
+    };
+
+    uint32_t indices[]{0, 1, 2};
+
+    MeshFormat meshFormat{
+        .vertexByteSize = sizeof(Vertex),
+        .indexType = VK_INDEX_TYPE_UINT32,
+    };
+
+    MeshBuffer *meshBuffer = &pImpl->meshBuffer;
+    VkCommandBuffer cmd = pImpl->commandBuffers[0];
+    vkResetCommandBuffer(cmd, 0);
+
+    VkCommandBufferBeginInfo beginInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = {},
+        .pInheritanceInfo = nullptr,
+    };
+
+    vkBeginCommandBuffer(cmd, &beginInfo);
+
+    //add mesh
+
+    pImpl->mesh =
+        addMesh(cmd, meshBuffer, &meshFormat, vertices, 3, indices, 3);
+
+
+    vkEndCommandBuffer(cmd);
+
+    VkSubmitInfo submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &cmd,
+    };
+
+    vkQueueSubmit(pImpl->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+    vkQueueWaitIdle(pImpl->graphicsQueue);
+  }
 }
 
 Instance::~Instance() {
-
   vkDeviceWaitIdle(pImpl->vkDevice);
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(pImpl->vkDevice, pImpl->imageAvailableSemaphores[i], nullptr);
-    vkDestroySemaphore(pImpl->vkDevice, pImpl->renderFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(pImpl->vkDevice, pImpl->imageAvailableSemaphores[i],
+                       nullptr);
+    vkDestroySemaphore(pImpl->vkDevice, pImpl->renderFinishedSemaphores[i],
+                       nullptr);
     vkDestroyFence(pImpl->vkDevice, pImpl->inFlightFences[i], nullptr);
   }
 
@@ -252,10 +395,8 @@ Instance::~Instance() {
     vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
   }
 
-  for(auto& pipeline : pImpl->pipelines) {
-    vkDestroyPipelineLayout(pImpl->vkDevice, pipeline->pipelineLayout, nullptr);
-    vkDestroyPipeline(pImpl->vkDevice, pipeline->pipeline, nullptr);
-    pipeline.reset();
+  for (auto &pipeline : pImpl->pipelines) {
+    vkDestroyPipeline(pImpl->vkDevice, pipeline, nullptr);
   }
 
   vkDestroyRenderPass(pImpl->vkDevice, pImpl->renderPass, nullptr);
@@ -274,23 +415,26 @@ void Instance::setFramebufferExtent(glm::ivec2 size) {
   pImpl->framebufferExtent.height = size.y;
 }
 
-const Pipeline *Instance::createPipeline(const PipelineDef *pipeline_def) {
-  Pipeline pipeline = ::g2::gfx::createPipeline(pImpl->vkDevice, pipeline_def, pImpl->swapChain.format);
-  return pImpl->pipelines.emplace_back(std::make_unique<Pipeline>(pipeline)).get();
+VkPipeline Instance::createPipeline(const PipelineDef *pipeline_def) {
+  VkPipeline pipeline = ::g2::gfx::createPipeline(pImpl->vkDevice, pipeline_def,
+                                                  pImpl->gfxPipelineLayout,
+                                                  pImpl->swapChain.format);
+  pImpl->pipelines.push_back(pipeline);
+  return pipeline;
 }
 
 CommandEncoder Instance::beginRenderpass() {
-  VkClearValue clearValue ={0.0f, 0.0f, 0.0f, 1.0f};
+  VkClearValue clearValue = {0.0f, 0.0f, 0.0f, 1.0f};
 
   VkRenderPassBeginInfo renderPassInfo{
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
       .renderPass = pImpl->renderPass,
       .framebuffer = pImpl->frameBuffers[pImpl->currentFrameBufferIndex],
       .renderArea =
-      VkRect2D{
-          .offset = {0, 0},
-          .extent = pImpl->swapChain.extent,
-      },
+          VkRect2D{
+              .offset = {0, 0},
+              .extent = pImpl->swapChain.extent,
+          },
       .clearValueCount = 1,
       .pClearValues = &clearValue,
   };
@@ -314,45 +458,55 @@ CommandEncoder Instance::beginRenderpass() {
   vkCmdSetScissor(cmd, 0, 1, &scissor);
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-  return CommandEncoder {
+  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->gfxPipelineLayout, 0, 1, &pImpl->descriptorSet, 0, nullptr);
+
+  return CommandEncoder{
       .cmdbuf = reinterpret_cast<uintptr_t>(cmd),
   };
-
 }
-void Instance::endRenderpass(CommandEncoder& command_encoder) {
-  VkCommandBuffer cmd = reinterpret_cast<VkCommandBuffer>(command_encoder.cmdbuf);
+void Instance::endRenderpass(CommandEncoder &command_encoder) {
+  VkCommandBuffer cmd =
+      reinterpret_cast<VkCommandBuffer>(command_encoder.cmdbuf);
   vkCmdEndRenderPass(cmd);
   command_encoder.cmdbuf = 0;
 }
 bool Instance::beginFrame() {
-
-  vkWaitForFences(pImpl->vkDevice, 1, &pImpl->inFlightFences[pImpl->currentFrame], true, UINT64_MAX);
+  vkWaitForFences(pImpl->vkDevice, 1,
+                  &pImpl->inFlightFences[pImpl->currentFrame], true,
+                  UINT64_MAX);
 
   uint32_t imageIndex;
-  auto acquire = vkAcquireNextImageKHR(pImpl->vkDevice, pImpl->swapChain.swapchain, UINT64_MAX,
-                        pImpl->imageAvailableSemaphores[pImpl->currentFrame],
-      nullptr, &imageIndex);
+  auto acquire = vkAcquireNextImageKHR(
+      pImpl->vkDevice, pImpl->swapChain.swapchain, UINT64_MAX,
+      pImpl->imageAvailableSemaphores[pImpl->currentFrame], nullptr,
+      &imageIndex);
 
-  if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR ) {
-
+  if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR) {
     vkDeviceWaitIdle(pImpl->vkDevice);
 
-    //We need to reset semaphore. simple way is to recreate it
-    vkDestroySemaphore(pImpl->vkDevice, pImpl->imageAvailableSemaphores[pImpl->currentFrame], nullptr);
+    // We need to reset semaphore. simple way is to recreate it
+    vkDestroySemaphore(pImpl->vkDevice,
+                       pImpl->imageAvailableSemaphores[pImpl->currentFrame],
+                       nullptr);
     VkSemaphoreCreateInfo semaphoreInfo{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
-    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr, &pImpl->imageAvailableSemaphores[pImpl->currentFrame]);
+    vkCreateSemaphore(pImpl->vkDevice, &semaphoreInfo, nullptr,
+                      &pImpl->imageAvailableSemaphores[pImpl->currentFrame]);
 
     auto prevFormat = pImpl->swapChain.format;
     pImpl->swapChain.shutdown(pImpl->vkDevice);
-    pImpl->swapChain = createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface, pImpl->framebufferExtent, pImpl->queue_family_indices);
+    pImpl->swapChain =
+        createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface,
+                        pImpl->framebufferExtent, pImpl->queue_family_indices);
     assert(prevFormat == pImpl->swapChain.format);
 
-    for(auto framebuffer : pImpl->frameBuffers) {
+    for (auto framebuffer : pImpl->frameBuffers) {
       vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
     }
-    createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, pImpl->swapChain.imageViews, pImpl->swapChain.extent, pImpl->renderPass);
+    createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers,
+                       pImpl->swapChain.imageViews, pImpl->swapChain.extent,
+                       pImpl->renderPass);
 
     return false;
   } else if (acquire != VK_SUCCESS) {
@@ -378,7 +532,6 @@ bool Instance::beginFrame() {
   return true;
 }
 void Instance::endFrame() {
-
   uint32_t imageIndex = pImpl->currentFrameBufferIndex;
   VkCommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
 
@@ -387,20 +540,19 @@ void Instance::endFrame() {
   }
 
   if (pImpl->imagesInFlight[imageIndex]) {
-    vkWaitForFences(pImpl->vkDevice, 1, &pImpl->imagesInFlight[imageIndex], true, UINT64_MAX);
+    vkWaitForFences(pImpl->vkDevice, 1, &pImpl->imagesInFlight[imageIndex],
+                    true, UINT64_MAX);
   }
 
-  pImpl->imagesInFlight[imageIndex] = pImpl->inFlightFences[pImpl->currentFrame];
+  pImpl->imagesInFlight[imageIndex] =
+      pImpl->inFlightFences[pImpl->currentFrame];
 
   VkSemaphore waitSemaphores[] = {
-      pImpl->imageAvailableSemaphores[pImpl->currentFrame]
-  };
+      pImpl->imageAvailableSemaphores[pImpl->currentFrame]};
   VkSemaphore signalSemaphores[] = {
-      pImpl->renderFinishedSemaphores[pImpl->currentFrame]
-  };
+      pImpl->renderFinishedSemaphores[pImpl->currentFrame]};
   VkPipelineStageFlags waitStages[] = {
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-  };
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
   VkSubmitInfo submitInfo{
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -413,10 +565,10 @@ void Instance::endFrame() {
       .pSignalSemaphores = signalSemaphores,
   };
 
+  vkResetFences(pImpl->vkDevice, 1,
+                &pImpl->inFlightFences[pImpl->currentFrame]);
 
-  vkResetFences(pImpl->vkDevice, 1, &pImpl->inFlightFences[pImpl->currentFrame]);
-
-  if (vkQueueSubmit(pImpl->graphicsQueue, 1,&submitInfo,
+  if (vkQueueSubmit(pImpl->graphicsQueue, 1, &submitInfo,
                     pImpl->inFlightFences[pImpl->currentFrame]) != VK_SUCCESS) {
     std::cerr << "failed to submit command buffers\n";
   }

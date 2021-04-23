@@ -7,7 +7,7 @@
 #include <fstream>
 #include "renderpass.h"
 
-g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_def, VkFormat displayFormat) {
+VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_def, VkPipelineLayout pipelineLayout, VkFormat displayFormat) {
 
 
   size_t moduleCount = pipeline_def->modules()->size();
@@ -134,21 +134,6 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
       .pDynamicStates = dynamicStates,
   };
 
-  VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .setLayoutCount = 0,
-      .pSetLayouts = nullptr,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr,
-  };
-
-
-
-  VkPipelineLayout  pipeline_layout;
-  if(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipeline_layout)) {
-    return {};
-  }
-
 
   //Create compatibility renderpass
   std::vector<VkFormat> formats;
@@ -176,7 +161,7 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
       .pDepthStencilState = nullptr,
       .pColorBlendState = &colorBlending,
       .pDynamicState = &dynamicState,
-      .layout = pipeline_layout,
+      .layout = pipelineLayout,
       .renderPass = render_pass,
       .subpass = 0,
       .basePipelineHandle = {},
@@ -196,8 +181,5 @@ g2::gfx::Pipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pi
 
   vkDestroyRenderPass(device, render_pass, nullptr);
 
-  return Pipeline {
-      .pipeline = pipeline,
-      .pipelineLayout = pipeline_layout,
-  };
+  return pipeline;
 }

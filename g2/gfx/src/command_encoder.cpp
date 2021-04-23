@@ -9,9 +9,9 @@
 
 static_assert(sizeof(g2::gfx::CommandEncoder::cmdbuf) == sizeof(VkCommandBuffer));
 
-void g2::gfx::CommandEncoder::bind_pipeline(const g2::gfx::Pipeline *pipeline) {
+void g2::gfx::CommandEncoder::bind_pipeline(VkPipeline pipeline) {
   auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
-  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
 void g2::gfx::CommandEncoder::draw(uint32_t vertexCount, uint32_t instanceCount,

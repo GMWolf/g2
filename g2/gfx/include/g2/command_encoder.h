@@ -8,13 +8,13 @@
 #include "viewport.h"
 #include <cstdint>
 
+struct VkPipeline_T;
+typedef VkPipeline_T* VkPipeline;
+
 namespace g2::gfx {
-
-struct Pipeline;
-
 struct CommandEncoder {
   uintptr_t cmdbuf;
-  void bind_pipeline(const Pipeline* pipeline);
+  void bind_pipeline(VkPipeline pipeline);
   void draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 };
 

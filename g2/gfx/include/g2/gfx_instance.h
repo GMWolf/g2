@@ -23,7 +23,6 @@ struct InstanceConfig {
 };
 
 struct PipelineDef;
-struct Pipeline;
 
 class Instance {
   struct Impl;
@@ -35,7 +34,7 @@ class Instance {
 
   void setFramebufferExtent(glm::ivec2 size);
 
-  const Pipeline* createPipeline(const PipelineDef* pipeline_def);
+  VkPipeline createPipeline(const PipelineDef* pipeline_def);
 
   [[nodiscard]] bool beginFrame();
   void endFrame();

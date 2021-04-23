@@ -8,6 +8,12 @@
 #include <vector>
 #include <g2/gfx/pipeline_generated.h>
 
+struct Vertex {
+  float pos[4];
+  float col[4];
+};
+
+
 int main()
 {
   g2::ApplicationConfiguration appConfig{
@@ -31,13 +37,13 @@ int main()
   std::vector<char> pipelineBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
                                 (std::istreambuf_iterator<char>()));
 
-  const g2::gfx::Pipeline* pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
+  VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
   std::ifstream pipelineDefInput2("pipeline2.json.bin", std::ios::binary);
   std::vector<char> pipelineBytes2((std::istreambuf_iterator<char>(pipelineDefInput2)),
                                 (std::istreambuf_iterator<char>()));
 
-  const g2::gfx::Pipeline* pipeline2 = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes2.data()));
+  VkPipeline pipeline2 = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes2.data()));
 
   while(!app.shouldClose()) {
     app.pollEvents();

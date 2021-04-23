@@ -5,6 +5,7 @@
     <mapping directory="$PROJECT_DIR$/thirdparty/SPIRV-Cross" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/SPIRV-Headers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/SPIRV-Tools" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/thirdparty/VulkanMemoryAllocator" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/flatbuffers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/glfw" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/glm" vcs="Git" />
