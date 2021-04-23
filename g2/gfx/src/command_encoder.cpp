@@ -21,3 +21,9 @@ void g2::gfx::CommandEncoder::draw(uint32_t vertexCount, uint32_t instanceCount,
   vkCmdDraw(cmd, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
+void g2::gfx::CommandEncoder::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstindex,
+                                          int32_t vertexOffset, uint32_t firstinstance) {
+    auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
+    vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstindex, vertexOffset, firstinstance);
+}
+

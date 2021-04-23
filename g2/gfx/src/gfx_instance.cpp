@@ -19,6 +19,7 @@
 #include "shader.h"
 #include "swapchain.h"
 #include "validation.h"
+#include "descriptors.h"
 
 namespace g2::gfx {
 
@@ -43,9 +44,7 @@ struct Instance::Impl {
 
   VmaAllocator allocator;
 
-  VkPipelineLayout gfxPipelineLayout;
-  VkDescriptorPool descriptorPool;
-  VkDescriptorSet descriptorSet;
+  GlobalDescriptors descriptors;
 
   MeshBuffer meshBuffer;
   Mesh mesh;
@@ -246,61 +245,7 @@ Instance::Instance(const InstanceConfig &config) {
   pImpl->imagesInFlight.resize(pImpl->swapChain.images.size());
 
   // create gfx pipeline layout
-
-  VkDescriptorSetLayoutBinding vertexBinding{
-      .binding = 0,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      .descriptorCount = 1,
-      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-      .pImmutableSamplers = nullptr,
-  };
-
-  VkDescriptorSetLayout descriptorSetLayout;
-  VkDescriptorSetLayoutCreateInfo layoutInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .bindingCount = 1,
-      .pBindings = &vertexBinding,
-  };
-
-  vkCreateDescriptorSetLayout(pImpl->vkDevice, &layoutInfo, nullptr,
-                              &descriptorSetLayout);
-
-  VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .setLayoutCount = 1,
-      .pSetLayouts = &descriptorSetLayout,
-      .pushConstantRangeCount = 0,
-      .pPushConstantRanges = nullptr,
-  };
-
-  VkPipelineLayout pipeline_layout;
-  if (vkCreatePipelineLayout(pImpl->vkDevice, &pipelineLayoutCreateInfo,
-                             nullptr, &pImpl->gfxPipelineLayout)) {
-  }
-
-  VkDescriptorPoolSize poolSize{
-      .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      .descriptorCount = 1,
-  };
-
-  VkDescriptorPoolCreateInfo poolInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .maxSets = 1,
-      .poolSizeCount = 1,
-      .pPoolSizes = &poolSize,
-  };
-
-  vkCreateDescriptorPool(pImpl->vkDevice, &poolInfo, nullptr,
-                         &pImpl->descriptorPool);
-
-  VkDescriptorSetAllocateInfo descriptorSetAllocInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = pImpl->descriptorPool,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &descriptorSetLayout
-  };
-
-  vkAllocateDescriptorSets(pImpl->vkDevice, &descriptorSetAllocInfo, &pImpl->descriptorSet);
+  pImpl->descriptors = createGlobalDescriptors(pImpl->vkDevice);
 
   initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
@@ -315,7 +260,7 @@ Instance::Instance(const InstanceConfig &config) {
 
     VkWriteDescriptorSet descriptorWrite {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = pImpl->descriptorSet,
+        .dstSet = pImpl->descriptors.resourceDescriptorSet,
         .dstBinding = 0,
         .dstArrayElement = 0,
         .descriptorCount = 1,
@@ -417,7 +362,7 @@ void Instance::setFramebufferExtent(glm::ivec2 size) {
 
 VkPipeline Instance::createPipeline(const PipelineDef *pipeline_def) {
   VkPipeline pipeline = ::g2::gfx::createPipeline(pImpl->vkDevice, pipeline_def,
-                                                  pImpl->gfxPipelineLayout,
+                                                  pImpl->descriptors.pipelineLayout,
                                                   pImpl->swapChain.format);
   pImpl->pipelines.push_back(pipeline);
   return pipeline;
@@ -458,7 +403,10 @@ CommandEncoder Instance::beginRenderpass() {
   vkCmdSetScissor(cmd, 0, 1, &scissor);
   vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->gfxPipelineLayout, 0, 1, &pImpl->descriptorSet, 0, nullptr);
+  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
+                          0, 1, &pImpl->descriptors.resourceDescriptorSet, 0, nullptr);
+
+    vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
   return CommandEncoder{
       .cmdbuf = reinterpret_cast<uintptr_t>(cmd),

@@ -52,9 +52,9 @@ int main()
     if (gfx.beginFrame()) {
       auto encoder = gfx.beginRenderpass();
       encoder.bind_pipeline(pipeline);
-      encoder.draw(3, 1, 0, 0);
+      encoder.drawIndexed(3, 1, 0, 0, 0);
       encoder.bind_pipeline(pipeline2);
-      encoder.draw(3, 1, 0, 0);
+      encoder.drawIndexed(3, 1, 0, 0, 0);
       gfx.endRenderpass(encoder);
       gfx.endFrame();
     }

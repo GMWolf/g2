@@ -29,7 +29,7 @@ void g2::gfx::initMeshBuffer(VmaAllocator allocator,
   VkBufferCreateInfo indexBufferInfo {
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .size = indexBufferSize,
-      .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+      .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
   };
 
@@ -67,12 +67,12 @@ g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, g2::gfx::MeshBuffer *meshBuf
   size_t vertexBytes = vertexCount * meshFormat->vertexByteSize;
   size_t indexBytes = indexByteSize * indexCount;
 
-  memcpy(meshBuffer->scratchPtr, vertexData, vertexCount * meshFormat->vertexByteSize);
+  memcpy(meshBuffer->scratchPtr, vertexData, vertexBytes);
   auto vertexAlloc = allocateFromLinearBuffer(&meshBuffer->vertexBuffer, vertexBytes, meshFormat->vertexByteSize);
   assert(vertexAlloc.size);
   uploadBuffer(cmd, meshBuffer->scratchBuffer.buffer, 0, vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset );
 
-  memcpy((char*)meshBuffer->scratchPtr + vertexBytes, indexData, indexCount);
+  memcpy((char*)meshBuffer->scratchPtr + vertexBytes, indexData, indexBytes);
   auto indexAlloc = allocateFromLinearBuffer(&meshBuffer->indexBuffer, indexBytes, indexByteSize);
   assert(indexAlloc.size);
   uploadBuffer(cmd, meshBuffer->scratchBuffer.buffer, vertexBytes, indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
