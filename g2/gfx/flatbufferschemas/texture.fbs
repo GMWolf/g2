@@ -1,0 +1,10 @@
+include "vk.fbs";
+
+namespace g2.gfx;
+
+table Texture {
+    width: ushort;
+    height: ushort;
+    format: Format;
+    data: [ubyte];
+}

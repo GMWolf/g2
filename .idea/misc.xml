@@ -17,6 +17,7 @@
       <file path="$PROJECT_DIR$/g2/util/src" />
     </sourceRoots>
     <libraryRoots>
+      <file path="$PROJECT_DIR$/thirdparty/KTX-Software" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Cross" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Headers" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Tools" />

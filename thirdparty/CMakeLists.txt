@@ -37,3 +37,9 @@ add_subdirectory(shaderc)
 
 add_library(rapidjson INTERFACE)
 target_include_directories(rapidjson INTERFACE rapidjson/include)
+
+set(KTX_FEATURE_TESTS OFF)
+set(KTX_FEATURE_KTX1 OFF)
+set(KTX_FEATURE_VULKAN OFF)
+
+add_subdirectory(KTX-Software)

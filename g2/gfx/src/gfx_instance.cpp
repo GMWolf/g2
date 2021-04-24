@@ -20,6 +20,7 @@
 #include "swapchain.h"
 #include "validation.h"
 #include "descriptors.h"
+#include "image.h"
 
 namespace g2::gfx {
 
@@ -308,6 +309,11 @@ Instance::Instance(const InstanceConfig &config) {
     pImpl->mesh =
         addMesh(cmd, meshBuffer, &meshFormat, vertices, 3, indices, 3);
 
+    //add image
+    std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
+    std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
+                                      (std::istreambuf_iterator<char>()));
+    Image image = loadImage(cmd, pImpl->allocator, imageBytes);
 
     vkEndCommandBuffer(cmd);
 

@@ -18,12 +18,12 @@ add_library(g2_gfx
         src/renderpass.h
         include/g2/viewport.h
         include/g2/command_encoder.h
-        src/command_encoder.cpp src/vma_impl.cpp src/mesh.cpp src/mesh.h src/Buffer.cpp src/Buffer.h src/descriptors.cpp src/descriptors.h)
+        src/command_encoder.cpp src/vma_impl.cpp src/mesh.cpp src/mesh.h src/Buffer.cpp src/Buffer.h src/descriptors.cpp src/descriptors.h src/image.cpp src/image.h)
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp
         src/validation.cpp)
 
 target_include_directories(g2_gfx PUBLIC include)
-target_link_libraries(g2_gfx PRIVATE vulkan vma)
+target_link_libraries(g2_gfx PRIVATE vulkan vma ktx)
 target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs)
