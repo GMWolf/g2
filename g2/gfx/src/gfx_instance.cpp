@@ -313,7 +313,7 @@ Instance::Instance(const InstanceConfig &config) {
     std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
     std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
                                       (std::istreambuf_iterator<char>()));
-    Image image = loadImage(cmd, pImpl->allocator, imageBytes);
+    Image image = loadImage(pImpl->vkDevice, cmd, pImpl->allocator, imageBytes);
 
     vkEndCommandBuffer(cmd);
 

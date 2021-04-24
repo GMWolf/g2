@@ -17,7 +17,7 @@ namespace g2::gfx {
         VkImageView view;
     };
 
-    Image loadImage(VkCommandBuffer cmd, VmaAllocator allocator, std::span<char> data);
+    Image loadImage(VkDevice device, VkCommandBuffer cmd, VmaAllocator allocator, std::span<char> data);
 
 }
 

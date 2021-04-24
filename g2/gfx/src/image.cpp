@@ -56,7 +56,7 @@ ktx_error_code_e tilingCallback(int miplevel, int face, int width, int height, i
 };
 
 
-g2::gfx::Image g2::gfx::loadImage(VkCommandBuffer cmd, VmaAllocator allocator, std::span<char> data) {
+g2::gfx::Image g2::gfx::loadImage(VkDevice device, VkCommandBuffer cmd, VmaAllocator allocator, std::span<char> data) {
 
 
     ktxTexture2* ktxTex;
@@ -130,6 +130,14 @@ g2::gfx::Image g2::gfx::loadImage(VkCommandBuffer cmd, VmaAllocator allocator, s
 
     ktxTexture_IterateLevels(ktxTexture(ktxTex), tilingCallback, &cbData);
 
+    VkImageSubresourceRange imageRange {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = ktxTex->numLevels,
+            .baseArrayLayer = 0,
+            .layerCount = ktxTex->numLayers * (ktxTex->isCubemap ? 6 : 1),
+    };
+
     {
         VkImageMemoryBarrier imageMemoryBarrier{
                 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -140,13 +148,7 @@ g2::gfx::Image g2::gfx::loadImage(VkCommandBuffer cmd, VmaAllocator allocator, s
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = image.image,
-                .subresourceRange = VkImageSubresourceRange{
-                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                        .baseMipLevel = 0,
-                        .levelCount = ktxTex->numLevels,
-                        .baseArrayLayer = 0,
-                        .layerCount = ktxTex->numLayers * (ktxTex->isCubemap ? 6 : 1),
-                },
+                .subresourceRange = imageRange,
         };
 
         vkCmdPipelineBarrier(cmd,
@@ -170,13 +172,7 @@ g2::gfx::Image g2::gfx::loadImage(VkCommandBuffer cmd, VmaAllocator allocator, s
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .image = image.image,
-                .subresourceRange = VkImageSubresourceRange {
-                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                        .baseMipLevel = 0,
-                        .levelCount = ktxTex->numLevels,
-                        .baseArrayLayer = 0,
-                        .layerCount = ktxTex->numLayers * (ktxTex->isCubemap ? 6 : 1),
-                },
+                .subresourceRange = imageRange,
         };
 
         vkCmdPipelineBarrier(cmd,
@@ -189,9 +185,27 @@ g2::gfx::Image g2::gfx::loadImage(VkCommandBuffer cmd, VmaAllocator allocator, s
     }
 
 
-    vmaDestroyBuffer(allocator, scratchBuffer.buffer, scratchBuffer.allocation);
+    //TODO Leak the buffer for now untill we have a real upload queue
+    //vmaDestroyBuffer(allocator, scratchBuffer.buffer, scratchBuffer.allocation);
     ktxTexture_Destroy(ktxTexture(ktxTex));
 
+
+    // Create the view
+    VkImageViewCreateInfo viewInfo {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image.image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = static_cast<VkFormat>(ktxTex->vkFormat),
+        .components = VkComponentMapping {
+            .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+        },
+        .subresourceRange = imageRange,
+    };
+
+    vkCreateImageView(device, &viewInfo, nullptr, &image.view);
 
     return image;
 
