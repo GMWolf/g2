@@ -143,8 +143,14 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
 
   auto validationLayers = getValidationLayerNames();
 
+  VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES
+  };
+  descriptorIndexingFeatures.descriptorBindingPartiallyBound = true;
+
   VkDeviceCreateInfo deviceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+      .pNext = &descriptorIndexingFeatures,
       .queueCreateInfoCount = queueCount,
       .pQueueCreateInfos = queueCreateInfos,
       .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
