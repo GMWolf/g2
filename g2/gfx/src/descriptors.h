@@ -6,6 +6,7 @@
 #define G2_G2_GFX_SRC_DESCRIPTORS_H_
 
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace g2::gfx {
 
@@ -21,17 +22,20 @@ enum DescriptorSetIndex {
 
 struct GlobalDescriptors {
 
-    VkDescriptorSetLayout resourceDescriptorSetLayout;
     VkPipelineLayout pipelineLayout;
 
+    VkDescriptorSetLayout resourceDescriptorSetLayout;
     VkDescriptorPool resourceDescriptorPool;
     VkDescriptorSet resourceDescriptorSet;
 
+    VkDescriptorSetLayout sceneDescriptorSetLayout;
+    VkDescriptorPool sceneDescriptorPool;
+    std::vector<VkDescriptorSet> sceneDescriptorSets;
 };
 
 
 
-GlobalDescriptors createGlobalDescriptors(VkDevice device);
+GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount);
 
 }
 

@@ -6,6 +6,7 @@
 
 #include "pipeline.h"
 #include <vulkan/vulkan.h>
+#include "mesh.h"
 
 static_assert(sizeof(g2::gfx::CommandEncoder::cmdbuf) == sizeof(VkCommandBuffer));
 
@@ -25,5 +26,12 @@ void g2::gfx::CommandEncoder::drawIndexed(uint32_t indexCount, uint32_t instance
                                           int32_t vertexOffset, uint32_t firstinstance) {
     auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
     vkCmdDrawIndexed(cmd, indexCount, instanceCount, firstindex, vertexOffset, firstinstance);
+}
+
+void g2::gfx::CommandEncoder::draw(const Mesh *mesh) {
+    auto cmd = reinterpret_cast<VkCommandBuffer>(cmdbuf);
+    for(auto& prim : mesh->primitives) {
+        vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+    }
 }
 

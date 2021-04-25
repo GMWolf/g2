@@ -43,8 +43,6 @@ int main()
   std::vector<char> pipelineBytes2((std::istreambuf_iterator<char>(pipelineDefInput2)),
                                 (std::istreambuf_iterator<char>()));
 
-  VkPipeline pipeline2 = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes2.data()));
-
   while(!app.shouldClose()) {
     app.pollEvents();
     gfx.setFramebufferExtent(app.getWindowSize());
@@ -52,9 +50,9 @@ int main()
     if (gfx.beginFrame()) {
       auto encoder = gfx.beginRenderpass();
       encoder.bind_pipeline(pipeline);
-      encoder.drawIndexed(3, 1, 0, 0, 0);
-      encoder.bind_pipeline(pipeline2);
-      encoder.drawIndexed(3, 1, 0, 0, 0);
+      //encoder.drawIndexed(3, 1, 0, 0, 0);
+      //encoder.bind_pipeline(pipeline2);
+      //encoder.drawIndexed(3, 1, 0, 0, 0);
       gfx.endRenderpass(encoder);
       gfx.endFrame();
     }

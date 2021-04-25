@@ -43,3 +43,6 @@ set(KTX_FEATURE_KTX1 OFF)
 set(KTX_FEATURE_VULKAN OFF)
 
 add_subdirectory(KTX-Software)
+
+add_library(cgltf INTERFACE)
+target_include_directories(cgltf INTERFACE cgltf)

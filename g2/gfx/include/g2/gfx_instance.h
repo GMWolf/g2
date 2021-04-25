@@ -13,6 +13,7 @@
 #include "command_encoder.h"
 #include "viewport.h"
 
+
 namespace g2::gfx {
 
 void init();
@@ -22,7 +23,10 @@ struct InstanceConfig {
   std::span<const char *> vkExtensions;
 };
 
+struct Mesh;
+
 struct PipelineDef;
+struct MeshData;
 
 class Instance {
   struct Impl;
@@ -35,6 +39,7 @@ class Instance {
   void setFramebufferExtent(glm::ivec2 size);
 
   VkPipeline createPipeline(const PipelineDef* pipeline_def);
+  const Mesh* addMesh(const MeshData* meshData);
 
   [[nodiscard]] bool beginFrame();
   void endFrame();

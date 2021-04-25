@@ -77,12 +77,38 @@ g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, g2::gfx::MeshBuffer *meshBuf
   assert(indexAlloc.size);
   uploadBuffer(cmd, meshBuffer->scratchBuffer.buffer, vertexBytes, indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
 
-  return Mesh{
-      .meshFormat = *meshFormat,
-      .baseVertex = vertexAlloc.offset / meshFormat->vertexByteSize,
-      .vertexCount = vertexCount,
-      .baseIndex = indexAlloc.offset / indexByteSize,
-      .indexCount = indexCount,
+  Primimitive prim {
+          .meshFormat = *meshFormat,
+          .baseVertex = vertexAlloc.offset / meshFormat->vertexByteSize,
+          .vertexCount = vertexCount,
+          .baseIndex = indexAlloc.offset / indexByteSize,
+          .indexCount = indexCount,
   };
+
+  return Mesh {
+          {prim}
+  };
+
+}
+
+g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, MeshBuffer* meshBuffer, const g2::gfx::MeshData *meshData) {
+
+    Mesh mesh;
+
+    for(auto primitive : *meshData->primitives()) {
+        MeshFormat format {
+                .vertexByteSize = primitive->vertexAlignment(),
+                .indexType = VK_INDEX_TYPE_UINT32,
+        };
+
+        //Todo actually append
+        return addMesh(cmd, meshBuffer, &format, (void*)primitive->vertexData()->data(), primitive->vertexCount(), (void*)primitive->indices()->data(), primitive->indices()->size());
+    }
+
+
+
+
+    return mesh;
+
 
 }

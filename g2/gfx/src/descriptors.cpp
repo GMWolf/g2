@@ -48,6 +48,19 @@ namespace g2::gfx {
 
 
 
+
+    static VkDescriptorSetLayoutBinding sceneDescriptorSetLayouts[]{
+        VkDescriptorSetLayoutBinding {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_ALL,
+            .pImmutableSamplers = nullptr,
+        }
+    };
+
+
+
     static void createDescriptorSetLayout(VkDevice device, std::span<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout* descriptorSetLayout) {
         VkDescriptorSetLayoutBindingFlagsCreateInfo flags {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
@@ -66,65 +79,86 @@ namespace g2::gfx {
     }
 
 
-    GlobalDescriptors createGlobalDescriptors(VkDevice device) {
+    GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount) {
 
         GlobalDescriptors descriptors{};
         createDescriptorSetLayout(device, resourceDescriptorSetLayouts, &descriptors.resourceDescriptorSetLayout);
+        createDescriptorSetLayout(device, sceneDescriptorSetLayouts, &descriptors.sceneDescriptorSetLayout);
 
-        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                .setLayoutCount = 1,
-                .pSetLayouts = &descriptors.resourceDescriptorSetLayout,
-                .pushConstantRangeCount = 0,
-                .pPushConstantRanges = nullptr,
-        };
-
-        vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &descriptors.pipelineLayout);
+        { // create pipeline
+            VkDescriptorSetLayout layouts[] = {
+                    descriptors.resourceDescriptorSetLayout,
+                    descriptors.sceneDescriptorSetLayout
+            };
 
 
+            VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                    .setLayoutCount = 2,
+                    .pSetLayouts = layouts,
+                    .pushConstantRangeCount = 0,
+                    .pPushConstantRanges = nullptr,
+            };
 
-        VkDescriptorPoolCreateInfo poolInfo{
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-                .maxSets = 1,
-                .poolSizeCount = 2,
-                .pPoolSizes = resourcePoolSizes,
-        };
+            vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &descriptors.pipelineLayout);
+        }
 
-        vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptors.resourceDescriptorPool);
+        { // Resource set
+            VkDescriptorPoolCreateInfo poolInfo{
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                    .maxSets = 1,
+                    .poolSizeCount = 2,
+                    .pPoolSizes = resourcePoolSizes,
+            };
 
-        VkDescriptorSetAllocateInfo descriptorSetAllocInfo{
-                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .descriptorPool = descriptors.resourceDescriptorPool,
-                .descriptorSetCount = 1,
-                .pSetLayouts = &descriptors.resourceDescriptorSetLayout,
-        };
+            vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptors.resourceDescriptorPool);
 
-        vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &descriptors.resourceDescriptorSet);
+            VkDescriptorSetAllocateInfo descriptorSetAllocInfo{
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                    .descriptorPool = descriptors.resourceDescriptorPool,
+                    .descriptorSetCount = 1,
+                    .pSetLayouts = &descriptors.resourceDescriptorSetLayout,
+            };
 
-        VkDescriptorImageInfo imageInfo {
-                .sampler = VK_NULL_HANDLE,
-                .imageView = VK_NULL_HANDLE,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
+            vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &descriptors.resourceDescriptorSet);
+        }
 
-        std::vector<VkDescriptorImageInfo> imageInfos(imageDescriptorCount, imageInfo);
+        { //scene set
+            VkDescriptorPoolSize scenePoolSizes[]{
+                    VkDescriptorPoolSize{
+                            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                            .descriptorCount = static_cast<uint32_t>(frameCount),
+                    }
+            };
 
-        // Fill textures with nothing
-        VkWriteDescriptorSet nullTexDescSet {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = descriptors.resourceDescriptorSet,
-                .dstBinding = 1,
-                .dstArrayElement = 0,
-                .descriptorCount = imageDescriptorCount,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = imageInfos.data(),
-                .pBufferInfo = nullptr,
-                .pTexelBufferView = nullptr
-        };
+            VkDescriptorPoolCreateInfo poolInfo{
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                    .maxSets = static_cast<uint32_t>(frameCount),
+                    .poolSizeCount = 1,
+                    .pPoolSizes = scenePoolSizes,
+            };
 
-        //vkUpdateDescriptorSets(device, 1, &nullTexDescSet, 0, nullptr);
+            vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptors.sceneDescriptorPool);
 
+            std::vector<VkDescriptorSetLayout> layouts(frameCount, descriptors.sceneDescriptorSetLayout);
+
+            descriptors.sceneDescriptorSets.resize(frameCount);
+
+            VkDescriptorSetAllocateInfo descriptorSetAllocInfo{
+                    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                    .descriptorPool = descriptors.sceneDescriptorPool,
+                    .descriptorSetCount = static_cast<uint32_t>(frameCount),
+                    .pSetLayouts = layouts.data(),
+            };
+
+            vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, descriptors.sceneDescriptorSets.data());
+
+
+        }
 
         return descriptors;
     }
+
+
+
 }

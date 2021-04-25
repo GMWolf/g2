@@ -34,3 +34,6 @@
 [submodule "thirdparty/KTX-Software"]
 	path = thirdparty/KTX-Software
 	url = git@github.com:KhronosGroup/KTX-Software.git
+[submodule "thirdparty/cgltf"]
+	path = thirdparty/cgltf
+	url = git@github.com:jkuhlmann/cgltf.git

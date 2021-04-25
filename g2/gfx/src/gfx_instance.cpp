@@ -21,6 +21,7 @@
 #include "validation.h"
 #include "descriptors.h"
 #include "image.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace g2::gfx {
 
@@ -49,6 +50,8 @@ namespace g2::gfx {
 
         MeshBuffer meshBuffer;
         Mesh mesh;
+
+        Buffer sceneBuffer;
 
         VkCommandPool commandPool;
         std::vector<VkCommandBuffer> commandBuffers;
@@ -246,31 +249,33 @@ namespace g2::gfx {
         pImpl->imagesInFlight.resize(pImpl->swapChain.images.size());
 
         // create gfx pipeline layout
-        pImpl->descriptors = createGlobalDescriptors(pImpl->vkDevice);
+        pImpl->descriptors = createGlobalDescriptors(pImpl->vkDevice, MAX_FRAMES_IN_FLIGHT);
 
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
         Image image{};
 
+        {
+            VkBufferCreateInfo bufferCreateInfo {
+                    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                    .size = sizeof(glm::mat4),
+                    .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            };
+
+            VmaAllocationCreateInfo bufferAllocInfo {
+                    .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+            };
+
+
+            createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer);
+            glm::mat4* mat;
+            vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&mat);
+            *mat = glm::perspective(glm::radians(90.0f), appSize.x / (float)appSize.y, 0.1f, 100.0f);
+        }
+
         // Add some mesh data
         {
-            struct Vertex {
-                float x, y, z, w;
-                float r, g, b, a;
-                float u, v, p0, p1;
-            } vertices[]{
-                    {0.0,  -0.5, 0, 1, 1, 0, 1, 1, 0.0, -0.5, 0, 0},
-                    {0.5,  0.5,  0, 1, 1, 1, 0, 1, 0.5, 0.5, 0, 0},
-                    {-0.5, 0.5,  0, 1, 0, 1, 1, 1, -0.5, 0.5, 0},
-            };
-
-            uint32_t indices[]{0, 1, 2};
-
-            MeshFormat meshFormat{
-                    .vertexByteSize = sizeof(Vertex),
-                    .indexType = VK_INDEX_TYPE_UINT32,
-            };
-
             MeshBuffer *meshBuffer = &pImpl->meshBuffer;
             VkCommandBuffer cmd = pImpl->commandBuffers[0];
             vkResetCommandBuffer(cmd, 0);
@@ -284,9 +289,13 @@ namespace g2::gfx {
             vkBeginCommandBuffer(cmd, &beginInfo);
 
             //add mesh
+            std::ifstream meshStream("AntiqueCamera/glTF/AntiqueCamera.gltf.camera_uv.bin", std::ios::binary);
+            std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
+                                         (std::istreambuf_iterator<char>()));
 
-            pImpl->mesh =
-                    addMesh(cmd, meshBuffer, &meshFormat, vertices, 3, indices, 3);
+            const MeshData* meshData = GetMeshData(meshBytes.data());
+
+            pImpl->mesh = ::g2::gfx::addMesh(cmd, meshBuffer, meshData);
 
             //add image
             std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
@@ -360,10 +369,34 @@ namespace g2::gfx {
                     .pImageInfo = &imageInfo,
                     .pBufferInfo = nullptr,
                     .pTexelBufferView = nullptr
-                }
+                },
             };
 
             vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
+
+            std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT);
+            for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                VkDescriptorBufferInfo bufferInfo{
+                        .buffer = pImpl->sceneBuffer.buffer,
+                        .offset = 0,
+                        .range = pImpl->sceneBuffer.size,
+                };
+
+                sceneDescriptorWrites[i] = {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
+                        .dstBinding = 0,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pImageInfo = nullptr,
+                        .pBufferInfo = &bufferInfo,
+                        .pTexelBufferView = nullptr
+                };
+            }
+
+            vkUpdateDescriptorSets(pImpl->vkDevice, sceneDescriptorWrites.size(), sceneDescriptorWrites.data(), 0, nullptr);
+
         }
     }
 
@@ -447,10 +480,16 @@ namespace g2::gfx {
         vkCmdSetScissor(cmd, 0, 1, &scissor);
         vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+        VkDescriptorSet descriptorSets[] = {
+                pImpl->descriptors.resourceDescriptorSet,
+                pImpl->descriptors.sceneDescriptorSets[pImpl->currentFrame],
+        };
+
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
-                                0, 1, &pImpl->descriptors.resourceDescriptorSet, 0, nullptr);
+                                0, 2, descriptorSets, 0, nullptr);
 
         vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
 
         return CommandEncoder{
                 .cmdbuf = reinterpret_cast<uintptr_t>(cmd),
@@ -460,6 +499,14 @@ namespace g2::gfx {
     void Instance::endRenderpass(CommandEncoder &command_encoder) {
         VkCommandBuffer cmd =
                 reinterpret_cast<VkCommandBuffer>(command_encoder.cmdbuf);
+
+
+        //Do a draw now
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
+        vkCmdDrawIndexed(cmd, pImpl->mesh.primitives[0].indexCount, 1, pImpl->mesh.primitives[0].baseIndex, 0, 0);
+
+
+
         vkCmdEndRenderPass(cmd);
         command_encoder.cmdbuf = 0;
     }
@@ -586,4 +633,6 @@ namespace g2::gfx {
 
         pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
+
+
 }  // namespace g2::gfx

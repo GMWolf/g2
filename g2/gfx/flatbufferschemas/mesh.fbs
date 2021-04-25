@@ -1,0 +1,15 @@
+
+namespace g2.gfx;
+
+table MeshPrimitive {
+    indices: [uint32];
+    vertexData: [ubyte];
+    vertexCount: uint32;
+    vertexAlignment: ubyte;
+}
+
+table MeshData {
+    primitives: [MeshPrimitive];
+}
+
+root_type MeshData;

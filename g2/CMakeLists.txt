@@ -7,3 +7,4 @@ add_subdirectory(platform)
 add_subdirectory(gfx)
 
 add_subdirectory(shader_compiler)
+add_subdirectory(gltf_compiler)
