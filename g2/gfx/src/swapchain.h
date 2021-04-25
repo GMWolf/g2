@@ -9,6 +9,8 @@
 
 #include "device.h"
 #include <vulkan/vulkan.h>
+#include <span>
+
 namespace g2::gfx {
 struct SwapChainSupportDetails {
   VkSurfaceCapabilitiesKHR capabilities;
@@ -24,6 +26,8 @@ struct SwapChain {
   VkExtent2D extent;
 
   uint32_t aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore);
+
+  void present(VkQueue presentQueue, std::span<VkSemaphore> waitSemaphore, uint32_t imageIndex);
 
   inline operator bool() const { return swapchain; }
   void shutdown(VkDevice device);

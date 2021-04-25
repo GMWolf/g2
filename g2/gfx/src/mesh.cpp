@@ -38,26 +38,10 @@ void g2::gfx::initMeshBuffer(VmaAllocator allocator,
   };
 
   createLinearBuffer(allocator, &indexBufferInfo, &indexAllocationInfo, &meshBuffer->indexBuffer);
-
-
-  VkBufferCreateInfo scratchBufferInfo {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      .size = indexBufferSize,
-      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-  };
-
-  VmaAllocationCreateInfo scratchAllocationInfo {
-      .usage = VMA_MEMORY_USAGE_CPU_ONLY,
-  };
-
-  createBuffer(allocator, &scratchBufferInfo, &scratchAllocationInfo, &meshBuffer->scratchBuffer);
-  vmaMapMemory(allocator, meshBuffer->scratchBuffer.allocation, &meshBuffer->scratchPtr);
-  assert(meshBuffer->scratchPtr);
 }
 
 
-g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, g2::gfx::MeshBuffer *meshBuffer,
+g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, g2::gfx::MeshBuffer *meshBuffer,
                       g2::gfx::MeshFormat *meshFormat, void *vertexData,
                       size_t vertexCount, void *indexData, size_t indexCount) {
 
@@ -67,15 +51,16 @@ g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, g2::gfx::MeshBuffer *meshBuf
   size_t vertexBytes = vertexCount * meshFormat->vertexByteSize;
   size_t indexBytes = indexByteSize * indexCount;
 
-  memcpy(meshBuffer->scratchPtr, vertexData, vertexBytes);
   auto vertexAlloc = allocateFromLinearBuffer(&meshBuffer->vertexBuffer, vertexBytes, meshFormat->vertexByteSize);
-  assert(vertexAlloc.size);
-  uploadBuffer(cmd, meshBuffer->scratchBuffer.buffer, 0, vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset );
+  assert(vertexAlloc);
+  void* vertexScratch = uploadQueue->queueBufferUpload(vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset);
+  memcpy(vertexScratch, vertexData, vertexBytes);
 
-  memcpy((char*)meshBuffer->scratchPtr + vertexBytes, indexData, indexBytes);
+
   auto indexAlloc = allocateFromLinearBuffer(&meshBuffer->indexBuffer, indexBytes, indexByteSize);
   assert(indexAlloc.size);
-  uploadBuffer(cmd, meshBuffer->scratchBuffer.buffer, vertexBytes, indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
+  void* indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
+  memcpy(indexScratch, indexData, indexBytes);
 
   Primimitive prim {
           .meshFormat = *meshFormat,
@@ -91,7 +76,7 @@ g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, g2::gfx::MeshBuffer *meshBuf
 
 }
 
-g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, MeshBuffer* meshBuffer, const g2::gfx::MeshData *meshData) {
+g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, const g2::gfx::MeshData *meshData) {
 
     Mesh mesh;
 
@@ -102,13 +87,9 @@ g2::gfx::Mesh g2::gfx::addMesh(VkCommandBuffer cmd, MeshBuffer* meshBuffer, cons
         };
 
         //Todo actually append
-        return addMesh(cmd, meshBuffer, &format, (void*)primitive->vertexData()->data(), primitive->vertexCount(), (void*)primitive->indices()->data(), primitive->indices()->size());
+        return addMesh(uploadQueue, meshBuffer, &format, (void*)primitive->vertexData()->data(), primitive->vertexCount(), (void*)primitive->indices()->data(), primitive->indices()->size());
     }
 
 
-
-
     return mesh;
-
-
 }

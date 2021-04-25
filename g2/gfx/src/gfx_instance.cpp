@@ -22,6 +22,7 @@
 #include "descriptors.h"
 #include "image.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include "upload.h"
 
 namespace g2::gfx {
 
@@ -49,6 +50,8 @@ namespace g2::gfx {
         GlobalDescriptors descriptors;
 
         MeshBuffer meshBuffer;
+        UploadQueue uploadQueue;
+
         Mesh mesh;
 
         Buffer sceneBuffer;
@@ -63,7 +66,6 @@ namespace g2::gfx {
         std::vector<VkFence> imagesInFlight;
 
         size_t currentFrame = 0;
-        size_t currentFrameBufferIndex;
     };
 
     static VkInstance createVkInstance(const InstanceConfig &config) {
@@ -107,7 +109,7 @@ namespace g2::gfx {
         VkCommandPoolCreateInfo poolInfo{
                 .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                 .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
-                         VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 .queueFamilyIndex = familyIndices.graphics.value(),
         };
 
@@ -251,6 +253,9 @@ namespace g2::gfx {
         // create gfx pipeline layout
         pImpl->descriptors = createGlobalDescriptors(pImpl->vkDevice, MAX_FRAMES_IN_FLIGHT);
 
+        createUploadQueue(pImpl->vkDevice, pImpl->allocator, queueFamilyIndices.graphics.value(), &pImpl->uploadQueue);
+
+
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
         Image image{};
@@ -299,7 +304,10 @@ namespace g2::gfx {
 
             const MeshData* meshData = GetMeshData(meshBytes.data());
 
-            pImpl->mesh = ::g2::gfx::addMesh(cmd, meshBuffer, meshData);
+            pImpl->mesh = ::g2::gfx::addMesh(&pImpl->uploadQueue, meshBuffer, meshData);
+
+
+            pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
 
             //add image
             std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
@@ -313,6 +321,7 @@ namespace g2::gfx {
                     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                     .commandBufferCount = 1,
                     .pCommandBuffers = &cmd,
+
             };
 
             vkQueueSubmit(pImpl->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
@@ -495,14 +504,13 @@ namespace g2::gfx {
             return;
         }
 
-        pImpl->currentFrameBufferIndex = imageIndex;
 
         VkCommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
         vkResetCommandBuffer(cmd, 0);
 
         VkCommandBufferBeginInfo beginInfo{
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                .flags = {},
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
                 .pInheritanceInfo = nullptr,
         };
 
@@ -515,7 +523,7 @@ namespace g2::gfx {
         VkRenderPassBeginInfo renderPassInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = pImpl->renderPass,
-                .framebuffer = pImpl->frameBuffers[pImpl->currentFrameBufferIndex],
+                .framebuffer = pImpl->frameBuffers[imageIndex],
                 .renderArea =
                 VkRect2D{
                         .offset = {0, 0},
@@ -553,7 +561,6 @@ namespace g2::gfx {
         vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
 
-
         //Do a draw now
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
         vkCmdDrawIndexed(cmd, pImpl->mesh.primitives[0].indexCount, 1, pImpl->mesh.primitives[0].baseIndex, 0, 0);
@@ -573,22 +580,22 @@ namespace g2::gfx {
         pImpl->imagesInFlight[imageIndex] =
                 pImpl->inFlightFences[pImpl->currentFrame];
 
-        VkSemaphore waitSemaphores[] = {
+        VkSemaphore imageAvailableSemaphores[] = {
                 pImpl->imageAvailableSemaphores[pImpl->currentFrame]};
-        VkSemaphore signalSemaphores[] = {
+        VkSemaphore submitCompleteSemaphores[] = {
                 pImpl->renderFinishedSemaphores[pImpl->currentFrame]};
         VkPipelineStageFlags waitStages[] = {
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-        VkSubmitInfo submitInfo{
+        VkSubmitInfo submitInfo {
                 .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                 .waitSemaphoreCount = 1,
-                .pWaitSemaphores = waitSemaphores,
+                .pWaitSemaphores = imageAvailableSemaphores,
                 .pWaitDstStageMask = waitStages,
                 .commandBufferCount = 1,
                 .pCommandBuffers = &cmd,
                 .signalSemaphoreCount = 1,
-                .pSignalSemaphores = signalSemaphores,
+                .pSignalSemaphores = submitCompleteSemaphores,
         };
 
         vkResetFences(pImpl->vkDevice, 1,
@@ -599,21 +606,7 @@ namespace g2::gfx {
             std::cerr << "failed to submit command buffers\n";
         }
 
-        VkSwapchainKHR swapChains[] = {pImpl->swapChain.swapchain};
-
-        VkPresentInfoKHR presentInfo{
-                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                .waitSemaphoreCount = 1,
-                .pWaitSemaphores = signalSemaphores,
-                .swapchainCount = 1,
-                .pSwapchains = swapChains,
-                .pImageIndices = &imageIndex,
-                .pResults = nullptr,
-        };
-
-        if (vkQueuePresentKHR(pImpl->presentQueue, &presentInfo) != VK_SUCCESS) {
-            std::cerr << "Failed to present image\n";
-        }
+        pImpl->swapChain.present(pImpl->presentQueue, submitCompleteSemaphores, imageIndex);
 
         pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }

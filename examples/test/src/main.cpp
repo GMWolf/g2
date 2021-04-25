@@ -39,6 +39,7 @@ int main()
 
   VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
+
   while(!app.shouldClose()) {
     app.pollEvents();
     gfx.setFramebufferExtent(app.getWindowSize());

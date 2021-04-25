@@ -19,6 +19,10 @@ struct Buffer {
 struct BufferRegion {
   size_t offset;
   size_t size;
+
+  inline operator bool() const {
+      return size > 0;
+  }
 };
 
 struct LinearBuffer : public Buffer{

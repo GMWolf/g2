@@ -1,5 +1,7 @@
 include "vk.fbs";
 
+file_extension "g2pipeline";
+
 namespace g2.gfx;
 
 table ShaderModule {

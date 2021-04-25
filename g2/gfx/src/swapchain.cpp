@@ -8,6 +8,7 @@
 
 #include "device.h"
 #include <span>
+#include <iostream>
 
 namespace g2::gfx {
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device,
@@ -219,5 +220,21 @@ namespace g2::gfx {
         }
 
         return imageIndex;
+    }
+
+    void SwapChain::present(VkQueue presentQueue, std::span<VkSemaphore> waitSemaphores, uint32_t imageIndex) {
+        VkPresentInfoKHR presentInfo {
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+                .pWaitSemaphores = waitSemaphores.data(),
+                .swapchainCount = 1,
+                .pSwapchains = &swapchain,
+                .pImageIndices = &imageIndex,
+                .pResults = nullptr,
+        };
+
+        if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
+            std::cerr << "Failed to present image\n";
+        }
     }
 }  // namespace g2::gfx

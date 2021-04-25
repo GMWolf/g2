@@ -12,6 +12,7 @@
 #include "Buffer.h"
 #include <vector>
 #include <g2/gfx/mesh_generated.h>
+#include "upload.h"
 
 namespace g2::gfx {
 
@@ -36,16 +37,13 @@ struct Mesh {
 struct MeshBuffer {
   LinearBuffer indexBuffer;
   LinearBuffer vertexBuffer;
-
-  Buffer scratchBuffer;
-  void* scratchPtr;
 };
 
 void initMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
 
-Mesh addMesh(VkCommandBuffer cmd, MeshBuffer* meshBuffer, MeshFormat* meshFormat, void* vertexData, size_t vertexCount, void* indexData, size_t indexCount);
+Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, MeshFormat* meshFormat, void* vertexData, size_t vertexCount, void* indexData, size_t indexCount);
 
-Mesh addMesh(VkCommandBuffer cmd, MeshBuffer* meshBuffer, const MeshData* meshData);
+Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, const MeshData* meshData);
 
 }
 

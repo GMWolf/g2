@@ -26,7 +26,7 @@ add_library(g2_gfx
         src/descriptors.h
         src/image.cpp
         src/image.h
-        )
+        src/upload.cpp src/upload.h)
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp

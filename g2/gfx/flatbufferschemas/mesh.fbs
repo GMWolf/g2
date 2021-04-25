@@ -1,3 +1,4 @@
+file_extension "g2mesh";
 
 namespace g2.gfx;
 
