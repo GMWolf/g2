@@ -23,6 +23,8 @@ struct SwapChain {
   VkFormat format;
   VkExtent2D extent;
 
+  uint32_t aquireImage(VkDevice device, VkSemaphore imageAvailableSemaphore);
+
   inline operator bool() const { return swapchain; }
   void shutdown(VkDevice device);
 };

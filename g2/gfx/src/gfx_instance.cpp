@@ -271,7 +271,11 @@ namespace g2::gfx {
             createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer);
             glm::mat4* mat;
             vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&mat);
-            *mat = glm::perspective(glm::radians(90.0f), appSize.x / (float)appSize.y, 0.1f, 100.0f);
+            auto view = glm::lookAt(glm::vec3(0,0,-2), glm::vec3(0,0,0), glm::vec3(0,1,0));
+            auto proj = glm::perspective(glm::radians(90.0f), appSize.x / (float)appSize.y, 0.1f, 100.0f);
+
+            *mat = proj * view;
+
         }
 
         // Add some mesh data
@@ -289,7 +293,7 @@ namespace g2::gfx {
             vkBeginCommandBuffer(cmd, &beginInfo);
 
             //add mesh
-            std::ifstream meshStream("AntiqueCamera/glTF/AntiqueCamera.gltf.camera_uv.bin", std::ios::binary);
+            std::ifstream meshStream("DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.bin", std::ios::binary);
             std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
                                          (std::istreambuf_iterator<char>()));
 
@@ -376,7 +380,7 @@ namespace g2::gfx {
 
             std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT);
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                VkDescriptorBufferInfo bufferInfo{
+                VkDescriptorBufferInfo bufferInfo {
                         .buffer = pImpl->sceneBuffer.buffer,
                         .offset = 0,
                         .range = pImpl->sceneBuffer.size,
@@ -445,73 +449,8 @@ namespace g2::gfx {
         return pipeline;
     }
 
-    CommandEncoder Instance::beginRenderpass() {
-        VkClearValue clearValue = {0.0f, 0.0f, 0.0f, 1.0f};
 
-        VkRenderPassBeginInfo renderPassInfo{
-                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                .renderPass = pImpl->renderPass,
-                .framebuffer = pImpl->frameBuffers[pImpl->currentFrameBufferIndex],
-                .renderArea =
-                VkRect2D{
-                        .offset = {0, 0},
-                        .extent = pImpl->swapChain.extent,
-                },
-                .clearValueCount = 1,
-                .pClearValues = &clearValue,
-        };
-
-        VkViewport viewport{
-                .x = 0,
-                .y = 0,
-                .width = static_cast<float>(pImpl->swapChain.extent.width),
-                .height = static_cast<float>(pImpl->swapChain.extent.height),
-                .minDepth = 0.0f,
-                .maxDepth = 1.0f,
-        };
-        VkRect2D scissor{
-                .offset = {0, 0},
-                .extent = pImpl->swapChain.extent,
-        };
-
-        VkCommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
-
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-        vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        VkDescriptorSet descriptorSets[] = {
-                pImpl->descriptors.resourceDescriptorSet,
-                pImpl->descriptors.sceneDescriptorSets[pImpl->currentFrame],
-        };
-
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
-                                0, 2, descriptorSets, 0, nullptr);
-
-        vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-
-        return CommandEncoder{
-                .cmdbuf = reinterpret_cast<uintptr_t>(cmd),
-        };
-    }
-
-    void Instance::endRenderpass(CommandEncoder &command_encoder) {
-        VkCommandBuffer cmd =
-                reinterpret_cast<VkCommandBuffer>(command_encoder.cmdbuf);
-
-
-        //Do a draw now
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
-        vkCmdDrawIndexed(cmd, pImpl->mesh.primitives[0].indexCount, 1, pImpl->mesh.primitives[0].baseIndex, 0, 0);
-
-
-
-        vkCmdEndRenderPass(cmd);
-        command_encoder.cmdbuf = 0;
-    }
-
-    bool Instance::beginFrame() {
+    void Instance::draw() {
         vkWaitForFences(pImpl->vkDevice, 1,
                         &pImpl->inFlightFences[pImpl->currentFrame], true,
                         UINT64_MAX);
@@ -521,6 +460,7 @@ namespace g2::gfx {
                 pImpl->vkDevice, pImpl->swapChain.swapchain, UINT64_MAX,
                 pImpl->imageAvailableSemaphores[pImpl->currentFrame], nullptr,
                 &imageIndex);
+
 
         if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR) {
             vkDeviceWaitIdle(pImpl->vkDevice);
@@ -549,10 +489,10 @@ namespace g2::gfx {
                                pImpl->swapChain.imageViews, pImpl->swapChain.extent,
                                pImpl->renderPass);
 
-            return false;
+            return;
         } else if (acquire != VK_SUCCESS) {
             std::cerr << "Error acquiring image\n";
-            return false;
+            return;
         }
 
         pImpl->currentFrameBufferIndex = imageIndex;
@@ -570,12 +510,56 @@ namespace g2::gfx {
             std::cerr << "Failed to begin command buffer" << std::endl;
         }
 
-        return true;
-    }
+        VkClearValue clearValue = {0.0f, 0.0f, 0.0f, 1.0f};
 
-    void Instance::endFrame() {
-        uint32_t imageIndex = pImpl->currentFrameBufferIndex;
-        VkCommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
+        VkRenderPassBeginInfo renderPassInfo{
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = pImpl->renderPass,
+                .framebuffer = pImpl->frameBuffers[pImpl->currentFrameBufferIndex],
+                .renderArea =
+                VkRect2D{
+                        .offset = {0, 0},
+                        .extent = pImpl->swapChain.extent,
+                },
+                .clearValueCount = 1,
+                .pClearValues = &clearValue,
+        };
+
+        VkViewport viewport{
+                .x = 0,
+                .y = 0,
+                .width = static_cast<float>(pImpl->swapChain.extent.width),
+                .height = static_cast<float>(pImpl->swapChain.extent.height),
+                .minDepth = 0.0f,
+                .maxDepth = 1.0f,
+        };
+        VkRect2D scissor{
+                .offset = {0, 0},
+                .extent = pImpl->swapChain.extent,
+        };
+
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
+        vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkDescriptorSet descriptorSets[] = {
+                pImpl->descriptors.resourceDescriptorSet,
+                pImpl->descriptors.sceneDescriptorSets[pImpl->currentFrame],
+        };
+
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
+                                0, 2, descriptorSets, 0, nullptr);
+
+        vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+
+        //Do a draw now
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
+        vkCmdDrawIndexed(cmd, pImpl->mesh.primitives[0].indexCount, 1, pImpl->mesh.primitives[0].baseIndex, 0, 0);
+
+        vkCmdEndRenderPass(cmd);
+
 
         if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
             std::cerr << "Failed to record command buffer\n";

@@ -39,23 +39,11 @@ int main()
 
   VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
-  std::ifstream pipelineDefInput2("pipeline2.json.bin", std::ios::binary);
-  std::vector<char> pipelineBytes2((std::istreambuf_iterator<char>(pipelineDefInput2)),
-                                (std::istreambuf_iterator<char>()));
-
   while(!app.shouldClose()) {
     app.pollEvents();
     gfx.setFramebufferExtent(app.getWindowSize());
 
-    if (gfx.beginFrame()) {
-      auto encoder = gfx.beginRenderpass();
-      encoder.bind_pipeline(pipeline);
-      //encoder.drawIndexed(3, 1, 0, 0, 0);
-      //encoder.bind_pipeline(pipeline2);
-      //encoder.drawIndexed(3, 1, 0, 0, 0);
-      gfx.endRenderpass(encoder);
-      gfx.endFrame();
-    }
+   gfx.draw();
 
   }
 

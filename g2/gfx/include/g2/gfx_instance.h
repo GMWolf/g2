@@ -10,9 +10,10 @@
 #include <memory>
 #include <span>
 
-#include "command_encoder.h"
 #include "viewport.h"
 
+struct VkPipeline_T;
+typedef VkPipeline_T* VkPipeline;
 
 namespace g2::gfx {
 
@@ -41,11 +42,9 @@ class Instance {
   VkPipeline createPipeline(const PipelineDef* pipeline_def);
   const Mesh* addMesh(const MeshData* meshData);
 
-  [[nodiscard]] bool beginFrame();
-  void endFrame();
 
-  CommandEncoder beginRenderpass();
-  void endRenderpass(CommandEncoder& command_encoder);
+  void draw();
+
 };
 }  // namespace g2::gfx
 #endif  // G2_GFX_INSTANCE_H

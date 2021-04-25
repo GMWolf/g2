@@ -17,8 +17,6 @@ add_library(g2_gfx
         src/renderpass.cpp
         src/renderpass.h
         include/g2/viewport.h
-        include/g2/command_encoder.h
-        src/command_encoder.cpp
         src/vma_impl.cpp
         src/mesh.cpp
         src/mesh.h
