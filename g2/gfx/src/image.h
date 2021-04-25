@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 #include <span>
 #include <vk_mem_alloc.h>
+#include "upload.h"
 
 namespace g2::gfx {
 
@@ -17,7 +18,7 @@ namespace g2::gfx {
         VkImageView view;
     };
 
-    Image loadImage(VkDevice device, VkCommandBuffer cmd, VmaAllocator allocator, std::span<char> data);
+    Image loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<char> data);
 
 }
 

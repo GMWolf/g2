@@ -27,6 +27,92 @@ namespace g2::gfx {
         return (char *) stagingBufferMap[currentUploadFrame] + stagingAlloc.offset;
     }
 
+    void *UploadQueue::queueImageUpload(size_t numBytes, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, std::span<VkBufferImageCopy> regions) {
+
+        if (regions.empty()) {
+            return nullptr;
+        }
+
+        auto stagingAlloc = allocateFromLinearBuffer(&stagingBuffer[currentUploadFrame], numBytes, 1);
+        if (!stagingAlloc) {
+            return nullptr;
+        }
+
+        // Patch region buffer offset, get range
+        uint32_t minMip = UINT32_MAX;
+        uint32_t maxMip = 0;
+        uint32_t minLayer = UINT32_MAX;
+        uint32_t maxLayer = 0;
+
+
+        for(auto& region : regions) {
+            region.bufferOffset += stagingAlloc.offset;
+
+            minMip = std::min(region.imageSubresource.mipLevel, minMip);
+            maxMip = std::max(region.imageSubresource.mipLevel, maxMip);
+            minLayer = std::min(region.imageSubresource.baseArrayLayer, minLayer);
+            maxLayer = std::max(region.imageSubresource.baseArrayLayer + region.imageSubresource.layerCount - 1, maxLayer);
+        }
+
+        VkImageSubresourceRange imageRange {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = minMip,
+                .levelCount = 1 + maxMip - minMip,
+                .baseArrayLayer = minLayer,
+                .layerCount = 1 + maxLayer - minLayer,
+        };
+        {
+
+            VkImageMemoryBarrier imageMemoryBarrier{
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                    .srcAccessMask = 0,
+                    .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                    .oldLayout = oldLayout,
+                    .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = image,
+                    .subresourceRange = imageRange,
+            };
+
+            vkCmdPipelineBarrier(commandBuffers[currentUploadFrame],
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageMemoryBarrier);
+        }
+
+        vkCmdCopyBufferToImage(commandBuffers[currentUploadFrame], stagingBuffer[currentUploadFrame].buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
+
+        {
+            VkImageMemoryBarrier imageMemoryBarrier {
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                    .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                    .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                    .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    .newLayout = newLayout,
+                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                    .image = image,
+                    .subresourceRange = imageRange,
+            };
+
+            vkCmdPipelineBarrier(commandBuffers[currentUploadFrame],
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageMemoryBarrier);
+        }
+
+        workCount++;
+
+        return (char*)stagingBufferMap[currentUploadFrame] + stagingAlloc.offset;
+    }
+
     void  UploadQueue::submit(VkDevice device, VkQueue queue) {
 
         vkEndCommandBuffer(commandBuffers[currentUploadFrame]);

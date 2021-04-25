@@ -313,18 +313,7 @@ namespace g2::gfx {
             std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
             std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
                                          (std::istreambuf_iterator<char>()));
-            image = loadImage(pImpl->vkDevice, cmd, pImpl->allocator, imageBytes);
-
-            vkEndCommandBuffer(cmd);
-
-            VkSubmitInfo submitInfo{
-                    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                    .commandBufferCount = 1,
-                    .pCommandBuffers = &cmd,
-
-            };
-
-            vkQueueSubmit(pImpl->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+            image = loadImage(pImpl->vkDevice, &pImpl->uploadQueue, pImpl->allocator, imageBytes);
 
             vkQueueWaitIdle(pImpl->graphicsQueue);
         }
