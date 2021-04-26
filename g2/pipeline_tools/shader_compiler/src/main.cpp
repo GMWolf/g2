@@ -40,6 +40,7 @@ int main(int argc, char* argv[]) {
 
   shaderc::Compiler compiler;
   shaderc::CompileOptions options;
+  options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 
 
   auto& shader = doc["shader"];

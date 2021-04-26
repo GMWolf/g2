@@ -147,6 +147,7 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES
   };
   descriptorIndexingFeatures.descriptorBindingPartiallyBound = true;
+  descriptorIndexingFeatures.runtimeDescriptorArray = true;
 
   VkDeviceCreateInfo deviceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

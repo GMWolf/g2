@@ -28,6 +28,11 @@ namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
+    struct DrawData {
+        uint32_t baseVertex;
+        uint32_t materialId;
+    };
+
     struct Instance::Impl {
         VkInstance vkInstance;
         VkPhysicalDevice physicalDevice;
@@ -42,6 +47,9 @@ namespace g2::gfx {
         VkRenderPass renderPass;
 
         std::vector<VkPipeline> pipelines;
+        std::vector<Mesh> meshes;
+        std::vector<Image> images;
+        VkSampler sampler;
 
         std::vector<VkFramebuffer> frameBuffers;
 
@@ -52,9 +60,9 @@ namespace g2::gfx {
         MeshBuffer meshBuffer;
         UploadQueue uploadQueue;
 
-        Mesh mesh;
-
         Buffer sceneBuffer;
+        Buffer drawDataBuffer[MAX_FRAMES_IN_FLIGHT];
+        DrawData* drawDataMap[MAX_FRAMES_IN_FLIGHT];
 
         VkCommandPool commandPool;
         std::vector<VkCommandBuffer> commandBuffers;
@@ -67,6 +75,8 @@ namespace g2::gfx {
 
         size_t currentFrame = 0;
     };
+
+
 
     static VkInstance createVkInstance(const InstanceConfig &config) {
         if (!checkValidationSupport()) {
@@ -258,8 +268,6 @@ namespace g2::gfx {
 
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
-        Image image{};
-
         {
             VkBufferCreateInfo bufferCreateInfo {
                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -283,42 +291,27 @@ namespace g2::gfx {
 
         }
 
-        // Add some mesh data
         {
-            MeshBuffer *meshBuffer = &pImpl->meshBuffer;
-            VkCommandBuffer cmd = pImpl->commandBuffers[0];
-            vkResetCommandBuffer(cmd, 0);
-
-            VkCommandBufferBeginInfo beginInfo{
-                    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                    .flags = {},
-                    .pInheritanceInfo = nullptr,
+            VkBufferCreateInfo bufferCreateInfo {
+                    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                    .size = sizeof(DrawData),
+                    .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             };
 
-            vkBeginCommandBuffer(cmd, &beginInfo);
+            VmaAllocationCreateInfo bufferAllocInfo {
+                    .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+            };
 
-            //add mesh
-            std::ifstream meshStream("DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.bin", std::ios::binary);
-            std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
-                                         (std::istreambuf_iterator<char>()));
-
-            const MeshData* meshData = GetMeshData(meshBytes.data());
-
-            pImpl->mesh = ::g2::gfx::addMesh(&pImpl->uploadQueue, meshBuffer, meshData);
-
-            //add image
-            std::ifstream imageStream("DamagedHelmet/Default_albedo.jpg.ktx2", std::ios::binary);
-            std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
-                                         (std::istreambuf_iterator<char>()));
-            image = loadImage(pImpl->vkDevice, &pImpl->uploadQueue, pImpl->allocator, imageBytes);
+            for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->drawDataBuffer[i]);
+                vmaMapMemory(pImpl->allocator, pImpl->drawDataBuffer[i].allocation, (void**)&pImpl->drawDataMap[i]);
+            }
 
 
-            pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
-
-            vkQueueWaitIdle(pImpl->graphicsQueue);
         }
 
-        VkSampler sampler;
+
         VkSamplerCreateInfo samplerInfo{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
@@ -332,7 +325,7 @@ namespace g2::gfx {
             .maxAnisotropy = 8, // TODO query max anisotropy
         };
 
-        vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &sampler);
+        vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &pImpl->sampler);
 
 
         {
@@ -343,11 +336,7 @@ namespace g2::gfx {
                     .range = pImpl->meshBuffer.vertexBuffer.size,
             };
 
-            VkDescriptorImageInfo imageInfo{
-                    .sampler = sampler,
-                    .imageView = image.view,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
+
 
             VkWriteDescriptorSet descriptorWrites[]{
                 {
@@ -361,30 +350,19 @@ namespace g2::gfx {
                     .pBufferInfo = &bufferInfo,
                     .pTexelBufferView = nullptr
                 },
-                {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = pImpl->descriptors.resourceDescriptorSet,
-                    .dstBinding = 1,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &imageInfo,
-                    .pBufferInfo = nullptr,
-                    .pTexelBufferView = nullptr
-                },
             };
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
+            vkUpdateDescriptorSets(pImpl->vkDevice, 1, descriptorWrites, 0, nullptr);
 
-            std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT);
+            std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT * 2);
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                VkDescriptorBufferInfo bufferInfo {
+                VkDescriptorBufferInfo sceneBufferInfo {
                         .buffer = pImpl->sceneBuffer.buffer,
                         .offset = 0,
                         .range = pImpl->sceneBuffer.size,
                 };
 
-                sceneDescriptorWrites[i] = {
+                sceneDescriptorWrites[i * 2] = {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
                         .dstBinding = 0,
@@ -392,7 +370,25 @@ namespace g2::gfx {
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pImageInfo = nullptr,
-                        .pBufferInfo = &bufferInfo,
+                        .pBufferInfo = &sceneBufferInfo,
+                        .pTexelBufferView = nullptr
+                };
+
+                VkDescriptorBufferInfo drawDataBufferInfo {
+                        .buffer = pImpl->drawDataBuffer[i].buffer,
+                        .offset = 0,
+                        .range = pImpl->drawDataBuffer[i].size,
+                };
+
+                sceneDescriptorWrites[i * 2 + 1] = {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
+                        .dstBinding = 1,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                        .pImageInfo = nullptr,
+                        .pBufferInfo = &drawDataBufferInfo,
                         .pTexelBufferView = nullptr
                 };
             }
@@ -448,7 +444,10 @@ namespace g2::gfx {
     }
 
 
-    void Instance::draw() {
+    void Instance::draw(std::span<DrawItem> drawItems) {
+
+        pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
+
         vkWaitForFences(pImpl->vkDevice, 1,
                         &pImpl->inFlightFences[pImpl->currentFrame], true,
                         UINT64_MAX);
@@ -552,7 +551,25 @@ namespace g2::gfx {
 
         //Do a draw now
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
-        vkCmdDrawIndexed(cmd, pImpl->mesh.primitives[0].indexCount, 1, pImpl->mesh.primitives[0].baseIndex, 0, 0);
+
+        DrawData* drawData = pImpl->drawDataMap[pImpl->currentFrame];
+
+        uint32_t drawIndex = 0;
+        for(DrawItem& item : drawItems) {
+            Mesh mesh = pImpl->meshes[item.mesh];
+            for(Primitive& prim : mesh.primitives) {
+
+                drawData[drawIndex] = {
+                        .baseVertex = static_cast<uint32_t>(prim.baseVertex),
+                        .materialId = item.image,
+                };
+
+                vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &drawIndex);
+                vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+
+                drawIndex++;
+            }
+        }
 
         vkCmdEndRenderPass(cmd);
 
@@ -600,5 +617,40 @@ namespace g2::gfx {
         pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
+    uint32_t Instance::addMesh(const MeshData *meshData) {
+       pImpl->meshes.emplace_back(::g2::gfx::addMesh(&pImpl->uploadQueue, &pImpl->meshBuffer, meshData));
+       return pImpl->meshes.size() - 1;
+    }
+
+    uint32_t Instance::addImage(std::span<char> data) {
+        Image image = loadImage(pImpl->vkDevice, &pImpl->uploadQueue, pImpl->allocator, data);
+        pImpl->images.push_back(image);
+
+        uint32_t index = pImpl->images.size() - 1;
+
+        VkDescriptorImageInfo imageInfo {
+                .sampler = pImpl->sampler,
+                .imageView = image.view,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = pImpl->descriptors.resourceDescriptorSet,
+            .dstBinding = 1,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+            .pBufferInfo = nullptr,
+            .pTexelBufferView = nullptr
+        };
+
+        vkUpdateDescriptorSets(pImpl->vkDevice, 1, &writeDescriptorSet, 0, nullptr);
+
+
+
+        return index;
+    }
 
 }  // namespace g2::gfx

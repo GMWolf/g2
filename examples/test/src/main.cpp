@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <g2/gfx/pipeline_generated.h>
+#include <g2/gfx/mesh_generated.h>
 
 struct Vertex {
   float pos[4];
@@ -40,11 +41,37 @@ int main()
   VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
 
+  std::ifstream meshStream("DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.bin", std::ios::binary);
+  std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
+                              (std::istreambuf_iterator<char>()));
+
+  const g2::gfx::MeshData* meshData = g2::gfx::GetMeshData(meshBytes.data());
+
+  auto mesh = gfx.addMesh(meshData);
+
+  std::ifstream imageStream("DamagedHelmet/Default_albedo.jpg.ktx2", std::ios::binary);
+  std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
+                               (std::istreambuf_iterator<char>()));
+  auto image = gfx.addImage(imageBytes);
+
+    std::ifstream imageStreamN("DamagedHelmet/Default_normal.jpg.ktx2", std::ios::binary);
+    std::vector<char> imageBytesN((std::istreambuf_iterator<char>(imageStreamN)),
+                                 (std::istreambuf_iterator<char>()));
+
+  auto imageN = gfx.addImage(imageBytesN);
+
+  g2::gfx::DrawItem drawItems[] {
+          {
+              .mesh = mesh,
+              .image = image,
+          }
+  };
+
   while(!app.shouldClose()) {
     app.pollEvents();
     gfx.setFramebufferExtent(app.getWindowSize());
 
-   gfx.draw();
+    gfx.draw(drawItems);
 
   }
 

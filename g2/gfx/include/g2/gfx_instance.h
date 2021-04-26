@@ -24,10 +24,13 @@ struct InstanceConfig {
   std::span<const char *> vkExtensions;
 };
 
-struct Mesh;
-
 struct PipelineDef;
 struct MeshData;
+
+struct DrawItem {
+    uint32_t mesh;
+    uint32_t image;
+};
 
 class Instance {
   struct Impl;
@@ -40,10 +43,11 @@ class Instance {
   void setFramebufferExtent(glm::ivec2 size);
 
   VkPipeline createPipeline(const PipelineDef* pipeline_def);
-  const Mesh* addMesh(const MeshData* meshData);
+  uint32_t addMesh(const MeshData* meshData);
+  uint32_t addImage(std::span<char> data);
 
 
-  void draw();
+  void draw(std::span<DrawItem> drawItems);
 
 };
 }  // namespace g2::gfx

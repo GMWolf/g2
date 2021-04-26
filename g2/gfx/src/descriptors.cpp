@@ -50,13 +50,29 @@ namespace g2::gfx {
 
 
     static VkDescriptorSetLayoutBinding sceneDescriptorSetLayouts[]{
+        //Uniforms
         VkDescriptorSetLayoutBinding {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_ALL,
             .pImmutableSamplers = nullptr,
+        },
+        //Draw data
+        VkDescriptorSetLayoutBinding {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_ALL,
+            .pImmutableSamplers = nullptr,
         }
+    };
+
+
+    VkPushConstantRange pushConstantRange {
+        .stageFlags = VK_SHADER_STAGE_ALL,
+        .offset = 0,
+        .size = sizeof(uint32_t),
     };
 
 
@@ -96,8 +112,8 @@ namespace g2::gfx {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                     .setLayoutCount = 2,
                     .pSetLayouts = layouts,
-                    .pushConstantRangeCount = 0,
-                    .pPushConstantRanges = nullptr,
+                    .pushConstantRangeCount = 1,
+                    .pPushConstantRanges = &pushConstantRange,
             };
 
             vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &descriptors.pipelineLayout);
@@ -128,13 +144,17 @@ namespace g2::gfx {
                     VkDescriptorPoolSize{
                             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                             .descriptorCount = static_cast<uint32_t>(frameCount),
+                    },
+                    VkDescriptorPoolSize{
+                            .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                            .descriptorCount = static_cast<uint32_t>(frameCount),
                     }
             };
 
             VkDescriptorPoolCreateInfo poolInfo{
                     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
                     .maxSets = static_cast<uint32_t>(frameCount),
-                    .poolSizeCount = 1,
+                    .poolSizeCount = 2,
                     .pPoolSizes = scenePoolSizes,
             };
 

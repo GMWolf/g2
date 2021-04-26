@@ -62,7 +62,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, g2::gfx::MeshBuffer *me
   void* indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
   memcpy(indexScratch, indexData, indexBytes);
 
-  Primimitive prim {
+  Primitive prim {
           .meshFormat = *meshFormat,
           .baseVertex = vertexAlloc.offset / meshFormat->vertexByteSize,
           .vertexCount = vertexCount,

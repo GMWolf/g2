@@ -21,7 +21,7 @@ struct MeshFormat {
   VkIndexType indexType;
 };
 
-struct Primimitive {
+struct Primitive {
   MeshFormat meshFormat;
   size_t baseVertex;  // Offset into mesh buffer in vertices
   size_t vertexCount;
@@ -30,7 +30,7 @@ struct Primimitive {
 };
 
 struct Mesh {
-    std::vector<Primimitive> primitives;
+    std::vector<Primitive> primitives;
 };
 
 

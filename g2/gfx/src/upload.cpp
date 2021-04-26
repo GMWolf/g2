@@ -115,9 +115,9 @@ namespace g2::gfx {
 
     void  UploadQueue::submit(VkDevice device, VkQueue queue) {
 
-        vkEndCommandBuffer(commandBuffers[currentUploadFrame]);
-
         if (workCount > 0) {
+            vkEndCommandBuffer(commandBuffers[currentUploadFrame]);
+
             // Submit current work
             VkSubmitInfo submitInfo{
                     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,

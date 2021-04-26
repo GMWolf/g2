@@ -11,6 +11,7 @@ add_custom_target(g2_test_pipelines DEPENDS pipeline.json.bin pipeline2.json.bin
 add_dependencies(g2_test g2_test_pipelines)
 
 g2_add_texture(DamagedHelmet/Default_albedo.jpg)
+g2_add_texture(DamagedHelmet/Default_normal.jpg)
 
-add_custom_target(textures DEPENDS DamagedHelmet/Default_albedo.jpg.ktx2)
+add_custom_target(textures DEPENDS DamagedHelmet/Default_albedo.jpg.ktx2 DamagedHelmet/Default_normal.jpg.ktx2)
 add_dependencies(g2_test textures)
