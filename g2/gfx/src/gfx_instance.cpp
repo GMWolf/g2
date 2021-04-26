@@ -306,14 +306,14 @@ namespace g2::gfx {
 
             pImpl->mesh = ::g2::gfx::addMesh(&pImpl->uploadQueue, meshBuffer, meshData);
 
-
-            pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
-
             //add image
-            std::ifstream imageStream("OldWoodPlanks.ktx2", std::ios::binary);
+            std::ifstream imageStream("DamagedHelmet/Default_albedo.jpg.ktx2", std::ios::binary);
             std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
                                          (std::istreambuf_iterator<char>()));
             image = loadImage(pImpl->vkDevice, &pImpl->uploadQueue, pImpl->allocator, imageBytes);
+
+
+            pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
 
             vkQueueWaitIdle(pImpl->graphicsQueue);
         }

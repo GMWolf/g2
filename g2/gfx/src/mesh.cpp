@@ -86,7 +86,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer,
                 .indexType = VK_INDEX_TYPE_UINT32,
         };
 
-        //Todo actually append
+        //Todo actually append primitives
         return addMesh(uploadQueue, meshBuffer, &format, (void*)primitive->vertexData()->data(), primitive->vertexCount(), (void*)primitive->indices()->data(), primitive->indices()->size());
     }
 

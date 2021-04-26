@@ -103,6 +103,8 @@ g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, Vma
 
     ktxTexture_IterateLevels(ktxTexture(ktxTex), tilingCallback, &cbData);
 
+    assert(ktxTexture(ktxTex)->classId == ktxTexture2_c);
+
     void* scratchPtr = uploadQueue->queueImageUpload(ktxTex->dataSize, image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cbData.regions);
     assert(ktxTex->pData);
     memcpy(scratchPtr, ktxTex->pData, ktxTex->dataSize);
