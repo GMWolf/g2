@@ -148,6 +148,18 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_
 
   VkRenderPass render_pass = createCompatibilityRenderPass(device, formats);
 
+  VkPipelineDepthStencilStateCreateInfo depthStencil{
+          .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+          .depthTestEnable = VK_TRUE,
+          .depthWriteEnable = VK_TRUE,
+          .depthCompareOp = VK_COMPARE_OP_LESS,
+          .depthBoundsTestEnable = VK_FALSE,
+          .stencilTestEnable = VK_FALSE,
+          .front = {},
+          .back = {},
+          .minDepthBounds = 0.0f,
+          .maxDepthBounds = 1.0f,
+  };
 
   VkGraphicsPipelineCreateInfo pipelineInfo{
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -158,7 +170,7 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_
       .pViewportState = &viewportState,
       .pRasterizationState = &rasterizer,
       .pMultisampleState = &multisampling,
-      .pDepthStencilState = nullptr,
+      .pDepthStencilState = &depthStencil,
       .pColorBlendState = &colorBlending,
       .pDynamicState = &dynamicState,
       .layout = pipelineLayout,

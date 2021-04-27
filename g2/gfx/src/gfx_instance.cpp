@@ -43,6 +43,10 @@ namespace g2::gfx {
         VkQueue presentQueue;
         VkSurfaceKHR surface;
         SwapChain swapChain;
+
+        VkImage depthImage;
+        VkImageView depthImageView;
+
         VkExtent2D framebufferExtent;
 
         VkRenderPass renderPass;
@@ -139,14 +143,15 @@ namespace g2::gfx {
     static void createFrameBuffers(VkDevice device,
                                    std::span<VkFramebuffer> framebuffers,
                                    std::span<VkImageView> imageViews,
+                                   VkImageView depthView,
                                    VkExtent2D extent, VkRenderPass renderPass) {
         for (size_t i = 0; i < imageViews.size(); i++) {
-            VkImageView attachments[] = {imageViews[i]};
+            VkImageView attachments[] = {imageViews[i], depthView};
 
             VkFramebufferCreateInfo frameBufferInfo{
                     .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                     .renderPass = renderPass,
-                    .attachmentCount = 1,
+                    .attachmentCount = 2,
                     .pAttachments = attachments,
                     .width = extent.width,
                     .height = extent.height,
@@ -224,11 +229,64 @@ namespace g2::gfx {
 
         pImpl->swapChain = swapChain;
 
+        {
+            VkImageCreateInfo imageInfo{
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                    .flags = 0,
+                    .imageType = VK_IMAGE_TYPE_2D,
+                    .format = VK_FORMAT_D32_SFLOAT,
+                    .extent = VkExtent3D {
+                            .width = swapChain.extent.width,
+                            .height = swapChain.extent.height,
+                            .depth = 1,
+                    },
+                    .mipLevels = 1,
+                    .arrayLayers = 1,
+                    .samples = VK_SAMPLE_COUNT_1_BIT,
+                    .tiling = VK_IMAGE_TILING_OPTIMAL,
+                    .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            };
+
+            VmaAllocationCreateInfo allocInfo {
+                    .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+                    .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            };
+
+            VmaAllocation allocation;
+            vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &allocation, nullptr);
+
+            VkImageViewCreateInfo viewInfo {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image = pImpl->depthImage,
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = VK_FORMAT_D32_SFLOAT,
+                .components = VkComponentMapping {
+                        .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                },
+                .subresourceRange = {
+                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                        .baseMipLevel = 0,
+                        .levelCount = 1,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                }
+            };
+
+            vkCreateImageView(pImpl->vkDevice, &viewInfo, nullptr, &pImpl->depthImageView);
+        }
+
+
         pImpl->renderPass = createRenderPass(pImpl->vkDevice, swapChain.format);
 
         // Create framebuffers
         pImpl->frameBuffers.resize(swapChain.imageViews.size());
         createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews,
+                           pImpl->depthImageView,
                            swapChain.extent, pImpl->renderPass);
 
         pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
@@ -522,11 +580,68 @@ namespace g2::gfx {
                                     pImpl->framebufferExtent, pImpl->queue_family_indices);
             assert(prevFormat == pImpl->swapChain.format);
 
+            vkDestroyImageView(pImpl->vkDevice, pImpl->depthImageView, nullptr);
+            vkDestroyImage(pImpl->vkDevice, pImpl->depthImage, nullptr);
+
+            {
+                VkImageCreateInfo imageInfo{
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                        .flags = 0,
+                        .imageType = VK_IMAGE_TYPE_2D,
+                        .format = VK_FORMAT_D32_SFLOAT,
+                        .extent = VkExtent3D {
+                                .width = pImpl->swapChain.extent.width,
+                                .height = pImpl->swapChain.extent.height,
+                                .depth = 0,
+                        },
+                        .mipLevels = 1,
+                        .arrayLayers = 1,
+                        .samples = VK_SAMPLE_COUNT_1_BIT,
+                        .tiling = VK_IMAGE_TILING_OPTIMAL,
+                        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                };
+
+                VmaAllocationCreateInfo allocInfo {
+                        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+                };
+
+                VmaAllocation allocation;
+                vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &allocation, nullptr);
+
+                VkImageViewCreateInfo viewInfo {
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                        .image = pImpl->depthImage,
+                        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                        .format = VK_FORMAT_D32_SFLOAT,
+                        .components = VkComponentMapping {
+                                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                        },
+                        .subresourceRange = {
+                                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = 1,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                        }
+                };
+
+                vkCreateImageView(pImpl->vkDevice, &viewInfo, nullptr, &pImpl->depthImageView);
+            }
+
+
             for (auto framebuffer : pImpl->frameBuffers) {
                 vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
             }
+
+
+
             createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers,
-                               pImpl->swapChain.imageViews, pImpl->swapChain.extent,
+                               pImpl->swapChain.imageViews, pImpl->depthImageView, pImpl->swapChain.extent,
                                pImpl->renderPass);
 
             return;
@@ -549,7 +664,9 @@ namespace g2::gfx {
             std::cerr << "Failed to begin command buffer" << std::endl;
         }
 
-        VkClearValue clearValue = {0.0f, 0.0f, 0.0f, 1.0f};
+        VkClearValue clearValues[2];
+        clearValues[0].color =  {0.0f, 0.0f, 0.0f, 1.0f};
+        clearValues[1].depthStencil = {1.0f, 0};
 
         VkRenderPassBeginInfo renderPassInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -560,8 +677,8 @@ namespace g2::gfx {
                         .offset = {0, 0},
                         .extent = pImpl->swapChain.extent,
                 },
-                .clearValueCount = 1,
-                .pClearValues = &clearValue,
+                .clearValueCount = 2,
+                .pClearValues = clearValues,
         };
 
         VkViewport viewport{

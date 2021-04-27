@@ -76,6 +76,11 @@ namespace g2::gfx {
         }
     };
 
+    static VkDescriptorBindingFlags sceneDescriptorBindingFlags[] {
+            0,0,0
+    };
+
+
 
     VkPushConstantRange pushConstantRange {
         .stageFlags = VK_SHADER_STAGE_ALL,
@@ -85,11 +90,11 @@ namespace g2::gfx {
 
 
 
-    static void createDescriptorSetLayout(VkDevice device, std::span<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout* descriptorSetLayout) {
+    static void createDescriptorSetLayout(VkDevice device, std::span<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout* descriptorSetLayout, std::span<VkDescriptorBindingFlags> bindingFlags) {
         VkDescriptorSetLayoutBindingFlagsCreateInfo flags {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-            .bindingCount = static_cast<uint32_t>(bindings.size()),
-            .pBindingFlags = resourceDescriptorBindingFlags,
+            .bindingCount = static_cast<uint32_t>(bindingFlags.size()),
+            .pBindingFlags = bindingFlags.data(),
         };
 
         VkDescriptorSetLayoutCreateInfo descriptorSetInfo{
@@ -106,8 +111,8 @@ namespace g2::gfx {
     GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount) {
 
         GlobalDescriptors descriptors{};
-        createDescriptorSetLayout(device, resourceDescriptorSetLayouts, &descriptors.resourceDescriptorSetLayout);
-        createDescriptorSetLayout(device, sceneDescriptorSetLayouts, &descriptors.sceneDescriptorSetLayout);
+        createDescriptorSetLayout(device, resourceDescriptorSetLayouts, &descriptors.resourceDescriptorSetLayout, resourceDescriptorBindingFlags);
+        createDescriptorSetLayout(device, sceneDescriptorSetLayouts, &descriptors.sceneDescriptorSetLayout, sceneDescriptorBindingFlags);
 
         { // create pipeline
             VkDescriptorSetLayout layouts[] = {
