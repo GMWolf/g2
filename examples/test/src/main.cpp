@@ -64,14 +64,37 @@ int main()
           {
               .mesh = mesh,
               .image = image,
+          },
+          {
+                  .mesh = mesh,
+                  .image = imageN,
           }
   };
+
+
+  float r = 0;
 
   while(!app.shouldClose()) {
     app.pollEvents();
     gfx.setFramebufferExtent(app.getWindowSize());
 
-    gfx.draw(drawItems);
+
+      g2::gfx::Transform transforms[] {
+              {
+                      .pos = {1,0,0},
+                      .scale = 1.0f,
+                      .orientation = glm::quat(glm::vec3(0, r, 0)),
+              },
+              {
+                      .pos = {-1,0,0},
+                      .scale = 1.0f,
+                      .orientation = glm::quat(),
+              }
+      };
+
+    gfx.draw(drawItems, transforms);
+
+    r += 0.00001;
 
   }
 

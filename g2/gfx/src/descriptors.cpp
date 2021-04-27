@@ -65,6 +65,14 @@ namespace g2::gfx {
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_ALL,
             .pImmutableSamplers = nullptr,
+        },
+        // Transform data
+        VkDescriptorSetLayoutBinding  {
+            .binding = 2,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .pImmutableSamplers = nullptr,
         }
     };
 
@@ -147,7 +155,7 @@ namespace g2::gfx {
                     },
                     VkDescriptorPoolSize{
                             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                            .descriptorCount = static_cast<uint32_t>(frameCount),
+                            .descriptorCount = 2 * static_cast<uint32_t>(frameCount),
                     }
             };
 

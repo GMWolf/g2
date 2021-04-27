@@ -11,6 +11,8 @@
 #include <span>
 
 #include "viewport.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 struct VkPipeline_T;
 typedef VkPipeline_T* VkPipeline;
@@ -32,6 +34,12 @@ struct DrawItem {
     uint32_t image;
 };
 
+struct Transform {
+    glm::vec3 pos;
+    float scale;
+    glm::quat orientation;
+};
+
 class Instance {
   struct Impl;
   std::unique_ptr<Impl> pImpl;
@@ -47,7 +55,7 @@ class Instance {
   uint32_t addImage(std::span<char> data);
 
 
-  void draw(std::span<DrawItem> drawItems);
+  void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms);
 
 };
 }  // namespace g2::gfx
