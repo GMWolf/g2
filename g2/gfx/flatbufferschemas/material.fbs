@@ -1,0 +1,19 @@
+file_extension "g2mat";
+
+namespace g2.gfx;
+
+table MaterialDef {
+    name: string;
+    albedo: string;
+    metallicRoughness: string;
+    normal: string;
+    occlusion: string;
+    emissive: string;
+}
+
+
+table MaterialMap {
+    materials: [MaterialDef];
+}
+
+root_type MaterialMap;

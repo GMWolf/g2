@@ -53,13 +53,13 @@ int main(int argc, char* argv[]) {
 
     if(result != cgltf_result_success) {
         std::cerr << "Error loading file: " << input << "\n";
-        return -1;
+        return 1;
     }
 
     result = cgltf_load_buffers(&options, data, input.c_str());
     if(result != cgltf_result_success) {
         std::cerr << "Error loading buffers for " << input << "error code: " << result << "\n";
-        return -1;
+        return 1;
     }
 
     auto mesh = std::find_if(data->meshes, data->meshes + data->meshes_count, [meshName](const cgltf_mesh& mesh) {
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
 
     if (mesh == data->meshes + data->meshes_count) {
         std::cerr << "Could not fine mesh " << meshName << " in " << input << "\n";
-        return -1;
+        return 1;
     }
 
     fb::FlatBufferBuilder fbb(1024 * 1024);
@@ -135,4 +135,6 @@ int main(int argc, char* argv[]) {
 
 
     cgltf_free(data);
+
+    return 0;
 }

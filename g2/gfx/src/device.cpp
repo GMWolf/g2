@@ -104,6 +104,8 @@ std::optional<VkPhysicalDevice> pickPhysicalDevice(VkInstance instance,
     return {};
   }
 
+  //return devices[1];
+
   for (auto &device : devices) {
     if (isDeviceSuitable(device, surface)) {
       return device;

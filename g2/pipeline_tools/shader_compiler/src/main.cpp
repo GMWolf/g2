@@ -133,4 +133,6 @@ int main(int argc, char* argv[]) {
     ofs << outputPath.c_str() << " : " << escapedVertexPath << " " << escapedFragmentPath;
   }
 
+  return 0;
+
 }

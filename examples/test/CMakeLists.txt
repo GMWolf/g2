@@ -12,5 +12,7 @@ add_dependencies(g2_test g2_test_pipelines)
 g2_add_texture(DamagedHelmet/Default_albedo.jpg)
 g2_add_texture(DamagedHelmet/Default_normal.jpg)
 
-add_custom_target(textures DEPENDS DamagedHelmet/Default_albedo.jpg.ktx2 DamagedHelmet/Default_normal.jpg.ktx2)
+g2_add_materials(DamagedHelmet/DamagedHelmet.gltf)
+
+add_custom_target(textures DEPENDS DamagedHelmet/Default_albedo.jpg.ktx2 DamagedHelmet/Default_normal.jpg.ktx2 DamagedHelmet/DamagedHelmet.gltf.g2mat)
 add_dependencies(g2_test textures)
