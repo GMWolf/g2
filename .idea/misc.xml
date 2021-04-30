@@ -4,6 +4,9 @@
   <component name="CidrRootsConfiguration">
     <sourceRoots>
       <file path="$PROJECT_DIR$/examples/test/src" />
+      <file path="$PROJECT_DIR$/g2/assets/flatbufferschemas" />
+      <file path="$PROJECT_DIR$/g2/assets/include" />
+      <file path="$PROJECT_DIR$/g2/assets/src" />
       <file path="$PROJECT_DIR$/g2/gfx/flatbufferschemas" />
       <file path="$PROJECT_DIR$/g2/gfx/gen" />
       <file path="$PROJECT_DIR$/g2/gfx/include" />

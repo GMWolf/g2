@@ -6,10 +6,10 @@ target_link_libraries(g2_shader_compiler PRIVATE shaderc spirv-cross-cpp flatbuf
 
 function(g2_add_pipeline input)
     add_custom_command(
-            OUTPUT ${input}.bin
-            COMMAND g2_shader_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${input} ${input}.bin
+            OUTPUT ${input}.g2ppln
+            COMMAND g2_shader_compiler ARGS ${CMAKE_CURRENT_LIST_DIR}/${input} ${input}.g2ppln
             DEPENDS "${input}" g2_shader_compiler
-            DEPFILE ${input}.bin.d
+            DEPFILE ${input}.g2ppln.d
             USES_TERMINAL
     )
 endfunction()

@@ -10,12 +10,7 @@
 #include <g2/gfx/pipeline_generated.h>
 #include <g2/gfx/mesh_generated.h>
 #include <g2/gfx/material_generated.h>
-
-struct Vertex {
-    float pos[4];
-    float col[4];
-};
-
+#include <g2/assets/asset_registry.h>
 
 int main() {
     g2::ApplicationConfiguration appConfig{
@@ -35,14 +30,19 @@ int main() {
 
     auto gfx = g2::gfx::Instance(gfxConfig);
 
-    std::ifstream pipelineDefInput("pipeline.json.bin", std::ios::binary);
+
+    g2::AssetRegistry assetRegistry;
+    assetRegistry.includePath("assets");
+
+
+    std::ifstream pipelineDefInput("assets/pipeline.json.g2ppln", std::ios::binary);
     std::vector<char> pipelineBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
                                     (std::istreambuf_iterator<char>()));
 
     VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
 
-    std::ifstream meshStream("DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.bin",
+    std::ifstream meshStream("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh",
                              std::ios::binary);
     std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
                                 (std::istreambuf_iterator<char>()));
@@ -52,7 +52,7 @@ int main() {
     auto mesh = gfx.addMesh(meshData);
 
 
-    std::ifstream materialsStream("DamagedHelmet/DamagedHelmet.gltf.g2mat",
+    std::ifstream materialsStream("assets/DamagedHelmet/DamagedHelmet.gltf.g2mat",
                                   std::ios::binary);
     std::vector<char> materialsBytes((std::istreambuf_iterator<char>(materialsStream)),
                                      (std::istreambuf_iterator<char>()));
