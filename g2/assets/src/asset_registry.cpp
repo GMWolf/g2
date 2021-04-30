@@ -14,7 +14,7 @@ void g2::AssetRegistry::registerManager(IAssetManager *assetManager) {
     assetManagers.push_back(assetManager);
 }
 
-uint64_t g2::AssetRegistry::getAssetIndex(const char *name) {
+uint32_t g2::AssetRegistry::getAssetIndex(const char *name) {
     auto f = assetMap.find(name);
     assert(f != assetMap.end());
     return f->second;
@@ -31,7 +31,7 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
             std::ifstream stream(p.path().c_str(), std::ios::binary);
             std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
                                         (std::istreambuf_iterator<char>()));
-            AssetAddResult result = m->add_asset(bytes.data());
+            AssetAddResult result = m->add_asset(bytes);
             patches.insert(patches.end(), result.patches.begin(), result.patches.end());
             assetMap.emplace(p.path().c_str(), result.index);
         }

@@ -9,8 +9,11 @@
 #include <span>
 #include <vk_mem_alloc.h>
 #include "upload.h"
+#include <g2/assets/asset_registry.h>
 
 namespace g2::gfx {
+
+
 
     struct Image {
         VkImage image;
@@ -19,6 +22,23 @@ namespace g2::gfx {
     };
 
     Image loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<char> data);
+
+
+    struct ImageAssetManager : public IAssetManager {
+
+        // TODO remove these members and use a queue queried from gfx instance.
+        VkDevice device;
+        UploadQueue* uploadQueue;
+        VmaAllocator allocator;
+        VkDescriptorSet resourceDescriptorSet;
+        VkSampler sampler;
+
+        std::vector<Image> images;
+
+        AssetAddResult add_asset(std::span<char> data) override;
+        const char *ext() override;
+    };
+
 
 }
 

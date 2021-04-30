@@ -15,16 +15,16 @@ namespace g2 {
 
     struct AssetReferencePatch {
         const char* name;
-        uint64_t* index;
+        uint32_t* index;
     };
 
     struct AssetAddResult {
-        uint64_t index;
+        uint32_t index;
         std::span<AssetReferencePatch> patches;
     };
 
     struct IAssetManager {
-        virtual AssetAddResult add_asset(void *) = 0;
+        virtual AssetAddResult add_asset(std::span<char> data) = 0;
         virtual const char* ext() = 0;
     };
 
@@ -32,13 +32,13 @@ namespace g2 {
     public:
         void includePath(const char* path);
         void registerManager(IAssetManager* assetManager);
-        uint64_t getAssetIndex(const char* name);
+        uint32_t getAssetIndex(const char* name);
     private:
         IAssetManager* findAssetManager(const std::filesystem::path& path);
 
         std::vector<std::filesystem::path> searchPaths;
         std::vector<IAssetManager*> assetManagers;
-        std::unordered_map<std::string, uint64_t> assetMap;
+        std::unordered_map<std::string, uint32_t> assetMap;
     };
 
 }

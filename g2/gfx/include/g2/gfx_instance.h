@@ -13,6 +13,7 @@
 #include "viewport.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <g2/assets/asset_registry.h>
 
 struct VkPipeline_T;
 typedef VkPipeline_T* VkPipeline;
@@ -45,15 +46,16 @@ class Instance {
   std::unique_ptr<Impl> pImpl;
 
  public:
+
   explicit Instance(const InstanceConfig &config);
   ~Instance();
+
+  IAssetManager* getImageManager();
 
   void setFramebufferExtent(glm::ivec2 size);
 
   VkPipeline createPipeline(const PipelineDef* pipeline_def);
   uint32_t addMesh(const MeshData* meshData);
-  uint32_t addImage(std::span<char> data);
-
 
   void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms);
 

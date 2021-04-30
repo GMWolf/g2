@@ -32,6 +32,9 @@ int main() {
 
 
     g2::AssetRegistry assetRegistry;
+
+    assetRegistry.registerManager(gfx.getImageManager());
+
     assetRegistry.includePath("assets");
 
 
@@ -60,17 +63,9 @@ int main() {
     const g2::gfx::MaterialMap *materialMap = g2::gfx::GetMaterialMap(materialsBytes.data());
     const g2::gfx::MaterialDef *mat = materialMap->materials()->Get(0);
 
+    auto image = assetRegistry.getAssetIndex(mat->albedo()->c_str());
 
-    std::ifstream imageStream(mat->albedo()->c_str(), std::ios::binary);
-    std::vector<char> imageBytes((std::istreambuf_iterator<char>(imageStream)),
-                                 (std::istreambuf_iterator<char>()));
-    auto image = gfx.addImage(imageBytes);
-
-    std::ifstream imageStreamN(mat->normal()->c_str(), std::ios::binary);
-    std::vector<char> imageBytesN((std::istreambuf_iterator<char>(imageStreamN)),
-                                  (std::istreambuf_iterator<char>()));
-
-    auto imageN = gfx.addImage(imageBytesN);
+    auto imageN = assetRegistry.getAssetIndex(mat->normal()->c_str());
 
 
     g2::gfx::DrawItem drawItems[]{

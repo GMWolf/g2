@@ -34,4 +34,4 @@ target_sources(g2_gfx PRIVATE
 
 target_include_directories(g2_gfx PUBLIC include)
 target_link_libraries(g2_gfx PRIVATE vulkan vma ktx)
-target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs)
+target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs g2_assets)

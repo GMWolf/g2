@@ -53,7 +53,7 @@ namespace g2::gfx {
 
         std::vector<VkPipeline> pipelines;
         std::vector<Mesh> meshes;
-        std::vector<Image> images;
+        ImageAssetManager imageManager;
         VkSampler sampler;
 
         std::vector<VkFramebuffer> frameBuffers;
@@ -407,6 +407,12 @@ namespace g2::gfx {
         };
 
         vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &pImpl->sampler);
+
+        pImpl->imageManager.device = pImpl->vkDevice;
+        pImpl->imageManager.uploadQueue = &pImpl->uploadQueue;
+        pImpl->imageManager.allocator = pImpl->allocator;
+        pImpl->imageManager.resourceDescriptorSet = pImpl->descriptors.resourceDescriptorSet;
+        pImpl->imageManager.sampler = pImpl->sampler;
 
 
         {
@@ -785,35 +791,7 @@ namespace g2::gfx {
        return pImpl->meshes.size() - 1;
     }
 
-    uint32_t Instance::addImage(std::span<char> data) {
-        Image image = loadImage(pImpl->vkDevice, &pImpl->uploadQueue, pImpl->allocator, data);
-        pImpl->images.push_back(image);
-
-        uint32_t index = pImpl->images.size() - 1;
-
-        VkDescriptorImageInfo imageInfo {
-                .sampler = pImpl->sampler,
-                .imageView = image.view,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
-
-        VkWriteDescriptorSet writeDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = pImpl->descriptors.resourceDescriptorSet,
-            .dstBinding = 1,
-            .dstArrayElement = index,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &imageInfo,
-            .pBufferInfo = nullptr,
-            .pTexelBufferView = nullptr
-        };
-
-        vkUpdateDescriptorSets(pImpl->vkDevice, 1, &writeDescriptorSet, 0, nullptr);
-
-
-
-        return index;
+    IAssetManager *Instance::getImageManager() {
+        return &pImpl->imageManager;
     }
-
 }  // namespace g2::gfx

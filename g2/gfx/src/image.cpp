@@ -9,6 +9,8 @@
 #include <cstring>
 #include <vector>
 #include <cassert>
+#include <g2/gfx_instance.h>
+#include <iostream>
 
 static VkImageType getImageTypeFromDimensions(uint32_t dim) {
     switch (dim) {
@@ -138,4 +140,40 @@ g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, Vma
 
     return image;
 
+}
+
+g2::AssetAddResult g2::gfx::ImageAssetManager::add_asset(std::span<char> data) {
+
+    auto& image = images.emplace_back(loadImage(device, uploadQueue, allocator, data));
+
+    uint32_t index = images.size() - 1;
+
+    VkDescriptorImageInfo imageInfo {
+            .sampler = sampler,
+            .imageView = image.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    };
+
+    VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = resourceDescriptorSet,
+            .dstBinding = 1,
+            .dstArrayElement = index,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+            .pBufferInfo = nullptr,
+            .pTexelBufferView = nullptr
+    };
+
+    vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+
+    return AssetAddResult {
+        .index = static_cast<uint32_t>(index),
+        .patches = {},
+    };
+}
+
+const char *g2::gfx::ImageAssetManager::ext() {
+    return ".ktx2";
 }
