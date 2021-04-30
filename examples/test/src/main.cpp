@@ -34,6 +34,7 @@ int main() {
     g2::AssetRegistry assetRegistry;
 
     assetRegistry.registerManager(gfx.getImageManager());
+    assetRegistry.registerManager(gfx.getMeshManager());
 
     assetRegistry.includePath("assets");
 
@@ -44,15 +45,7 @@ int main() {
 
     VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
-
-    std::ifstream meshStream("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh",
-                             std::ios::binary);
-    std::vector<char> meshBytes((std::istreambuf_iterator<char>(meshStream)),
-                                (std::istreambuf_iterator<char>()));
-
-    const g2::gfx::MeshData *meshData = g2::gfx::GetMeshData(meshBytes.data());
-
-    auto mesh = gfx.addMesh(meshData);
+    auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh");
 
 
     std::ifstream materialsStream("assets/DamagedHelmet/DamagedHelmet.gltf.g2mat",

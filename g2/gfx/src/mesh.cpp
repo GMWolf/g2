@@ -93,3 +93,21 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer,
 
     return mesh;
 }
+
+g2::AssetAddResult g2::gfx::MeshAssetManager::add_asset(std::span<char> data) {
+    auto meshData = g2::gfx::GetMeshData(data.data());
+
+    auto& mesh = meshes.emplace_back(addMesh(uploadQueue, meshBuffer, meshData));
+
+    uint32_t index = meshes.size() - 1;
+
+    return AssetAddResult {
+        .index = index,
+        .patches = {},
+    };
+
+}
+
+const char *g2::gfx::MeshAssetManager::ext() {
+    return ".g2mesh";
+}

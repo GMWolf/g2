@@ -51,11 +51,11 @@ class Instance {
   ~Instance();
 
   IAssetManager* getImageManager();
+  IAssetManager* getMeshManager();
 
   void setFramebufferExtent(glm::ivec2 size);
 
   VkPipeline createPipeline(const PipelineDef* pipeline_def);
-  uint32_t addMesh(const MeshData* meshData);
 
   void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms);
 

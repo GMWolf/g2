@@ -13,6 +13,8 @@
 #include <vector>
 #include <g2/gfx/mesh_generated.h>
 #include "upload.h"
+#include <g2/assets/asset_registry.h>
+#include <vector>
 
 namespace g2::gfx {
 
@@ -44,6 +46,18 @@ void initMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
 Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, MeshFormat* meshFormat, void* vertexData, size_t vertexCount, void* indexData, size_t indexCount);
 
 Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, const MeshData* meshData);
+
+struct MeshAssetManager : public IAssetManager{
+
+    // TODO use some sort of queue
+    UploadQueue* uploadQueue;
+    MeshBuffer* meshBuffer;
+
+    std::vector<Mesh> meshes;
+
+    AssetAddResult add_asset(std::span<char> data) override;
+    const char *ext() override;
+};
 
 }
 

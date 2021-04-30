@@ -52,7 +52,7 @@ namespace g2::gfx {
         VkRenderPass renderPass;
 
         std::vector<VkPipeline> pipelines;
-        std::vector<Mesh> meshes;
+        MeshAssetManager meshManager;
         ImageAssetManager imageManager;
         VkSampler sampler;
 
@@ -408,12 +408,17 @@ namespace g2::gfx {
 
         vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &pImpl->sampler);
 
-        pImpl->imageManager.device = pImpl->vkDevice;
-        pImpl->imageManager.uploadQueue = &pImpl->uploadQueue;
-        pImpl->imageManager.allocator = pImpl->allocator;
-        pImpl->imageManager.resourceDescriptorSet = pImpl->descriptors.resourceDescriptorSet;
-        pImpl->imageManager.sampler = pImpl->sampler;
-
+        {
+            pImpl->imageManager.device = pImpl->vkDevice;
+            pImpl->imageManager.uploadQueue = &pImpl->uploadQueue;
+            pImpl->imageManager.allocator = pImpl->allocator;
+            pImpl->imageManager.resourceDescriptorSet = pImpl->descriptors.resourceDescriptorSet;
+            pImpl->imageManager.sampler = pImpl->sampler;
+        }
+        {
+            pImpl->meshManager.uploadQueue = &pImpl->uploadQueue;
+            pImpl->meshManager.meshBuffer = &pImpl->meshBuffer;
+        }
 
         {
             //update set
@@ -725,7 +730,7 @@ namespace g2::gfx {
 
         uint32_t drawIndex = 0;
         for(DrawItem& item : drawItems) {
-            Mesh mesh = pImpl->meshes[item.mesh];
+            Mesh mesh = pImpl->meshManager.meshes[item.mesh];
             for(Primitive& prim : mesh.primitives) {
 
                 drawData[drawIndex] = {
@@ -786,12 +791,13 @@ namespace g2::gfx {
         pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    uint32_t Instance::addMesh(const MeshData *meshData) {
-       pImpl->meshes.emplace_back(::g2::gfx::addMesh(&pImpl->uploadQueue, &pImpl->meshBuffer, meshData));
-       return pImpl->meshes.size() - 1;
-    }
+
 
     IAssetManager *Instance::getImageManager() {
         return &pImpl->imageManager;
+    }
+
+    IAssetManager *Instance::getMeshManager() {
+        return &pImpl->meshManager;
     }
 }  // namespace g2::gfx
