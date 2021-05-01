@@ -20,7 +20,7 @@ namespace g2 {
 
     struct AssetAddResult {
         uint32_t index;
-        std::span<AssetReferencePatch> patches;
+        std::vector<AssetReferencePatch> patches;
     };
 
     struct IAssetManager {

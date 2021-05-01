@@ -41,26 +41,16 @@ int main() {
 
     auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh");
 
-
-    std::ifstream materialsStream("assets/DamagedHelmet/DamagedHelmet.gltf.g2mat",
-                                  std::ios::binary);
-    std::vector<char> materialsBytes((std::istreambuf_iterator<char>(materialsStream)),
-                                     (std::istreambuf_iterator<char>()));
-
-    const g2::gfx::MaterialMap *materialMap = g2::gfx::GetMaterialMap(materialsBytes.data());
-    const g2::gfx::MaterialDef *mat = materialMap->materials()->Get(0);
-
-    auto image = assetRegistry.getAssetIndex(mat->albedo()->c_str());
-    auto imageN = assetRegistry.getAssetIndex(mat->normal()->c_str());
+    auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.g2mat");
 
     g2::gfx::DrawItem drawItems[]{
             {
                     .mesh = mesh,
-                    .image = image,
+                    .material = material,
             },
             {
                     .mesh = mesh,
-                    .image = imageN,
+                    .material = material,
             }
     };
 
@@ -80,7 +70,7 @@ int main() {
                 },
                 {
                         .pos = {-1, 0, 0},
-                        .scale = 1.0f,
+                        .scale = 0.8f,
                         .orientation = glm::quat(),
                 }
         };

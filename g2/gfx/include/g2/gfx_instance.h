@@ -32,7 +32,7 @@ struct MeshData;
 
 struct DrawItem {
     uint32_t mesh;
-    uint32_t image;
+    uint32_t material;
 };
 
 struct Transform {

@@ -37,6 +37,10 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
         }
     }
 
+    for(auto& patch : patches) {
+        *patch.index = getAssetIndex(patch.name);
+    }
+
 }
 
 g2::IAssetManager *g2::AssetRegistry::findAssetManager(const fs::path& path) {

@@ -23,6 +23,7 @@
 #include "image.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include "upload.h"
+#include "material.h"
 
 namespace g2::gfx {
 
@@ -54,7 +55,8 @@ namespace g2::gfx {
         MeshAssetManager meshManager;
         ImageAssetManager imageManager;
         PipelineAssetManager pipelineAssetManager;
-        IAssetManager* assetManagers[3];
+        MaterialAssetManager materialManager;
+        IAssetManager* assetManagers[4];
 
         VkSampler sampler;
 
@@ -430,6 +432,7 @@ namespace g2::gfx {
         pImpl->assetManagers[0] = &pImpl->imageManager;
         pImpl->assetManagers[1] = &pImpl->pipelineAssetManager;
         pImpl->assetManagers[2] = &pImpl->meshManager;
+        pImpl->assetManagers[3] = &pImpl->materialManager;
 
         {
             //update set
@@ -734,7 +737,7 @@ namespace g2::gfx {
 
                 drawData[drawIndex] = {
                         .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                        .materialId = item.image,
+                        .materialId = pImpl->materialManager.materials[item.material].albedoImage,
                 };
 
                 vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &drawIndex);
