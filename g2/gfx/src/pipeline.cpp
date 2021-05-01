@@ -195,3 +195,18 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef* pipeline_
 
   return pipeline;
 }
+
+g2::AssetAddResult g2::gfx::PipelineAssetManager::add_asset(std::span<char> data) {
+    auto pipelineDef = g2::gfx::GetPipelineDef(data.data());
+
+    pipelines.push_back(createPipeline(device, pipelineDef, layout, displayFormat));
+
+    return AssetAddResult {
+        .index = static_cast<uint32_t>(pipelines.size() - 1),
+        .patches = {},
+    };
+}
+
+const char *g2::gfx::PipelineAssetManager::ext() {
+    return ".g2ppln";
+}

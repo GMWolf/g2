@@ -50,12 +50,9 @@ class Instance {
   explicit Instance(const InstanceConfig &config);
   ~Instance();
 
-  IAssetManager* getImageManager();
-  IAssetManager* getMeshManager();
+  std::span<IAssetManager*> getAssetManagers();
 
   void setFramebufferExtent(glm::ivec2 size);
-
-  VkPipeline createPipeline(const PipelineDef* pipeline_def);
 
   void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms);
 

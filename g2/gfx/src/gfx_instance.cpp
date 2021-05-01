@@ -51,9 +51,11 @@ namespace g2::gfx {
 
         VkRenderPass renderPass;
 
-        std::vector<VkPipeline> pipelines;
         MeshAssetManager meshManager;
         ImageAssetManager imageManager;
+        PipelineAssetManager pipelineAssetManager;
+        IAssetManager* assetManagers[3];
+
         VkSampler sampler;
 
         std::vector<VkFramebuffer> frameBuffers;
@@ -419,6 +421,15 @@ namespace g2::gfx {
             pImpl->meshManager.uploadQueue = &pImpl->uploadQueue;
             pImpl->meshManager.meshBuffer = &pImpl->meshBuffer;
         }
+        {
+            pImpl->pipelineAssetManager.displayFormat = pImpl->swapChain.format;
+            pImpl->pipelineAssetManager.layout = pImpl->descriptors.pipelineLayout;
+            pImpl->pipelineAssetManager.device = pImpl->vkDevice;
+        }
+
+        pImpl->assetManagers[0] = &pImpl->imageManager;
+        pImpl->assetManagers[1] = &pImpl->pipelineAssetManager;
+        pImpl->assetManagers[2] = &pImpl->meshManager;
 
         {
             //update set
@@ -525,10 +536,6 @@ namespace g2::gfx {
             vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
         }
 
-        for (auto &pipeline : pImpl->pipelines) {
-            vkDestroyPipeline(pImpl->vkDevice, pipeline, nullptr);
-        }
-
         vkDestroyRenderPass(pImpl->vkDevice, pImpl->renderPass, nullptr);
 
         pImpl->swapChain.shutdown(pImpl->vkDevice);
@@ -543,14 +550,6 @@ namespace g2::gfx {
     void Instance::setFramebufferExtent(glm::ivec2 size) {
         pImpl->framebufferExtent.width = size.x;
         pImpl->framebufferExtent.height = size.y;
-    }
-
-    VkPipeline Instance::createPipeline(const PipelineDef *pipeline_def) {
-        VkPipeline pipeline = ::g2::gfx::createPipeline(pImpl->vkDevice, pipeline_def,
-                                                        pImpl->descriptors.pipelineLayout,
-                                                        pImpl->swapChain.format);
-        pImpl->pipelines.push_back(pipeline);
-        return pipeline;
     }
 
 
@@ -721,7 +720,7 @@ namespace g2::gfx {
 
 
         //Do a draw now
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelines[0]);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelineAssetManager.pipelines[0]);
 
 
         memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
@@ -791,13 +790,9 @@ namespace g2::gfx {
         pImpl->currentFrame = (pImpl->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-
-
-    IAssetManager *Instance::getImageManager() {
-        return &pImpl->imageManager;
+    std::span<IAssetManager *> Instance::getAssetManagers() {
+        return pImpl->assetManagers;
     }
 
-    IAssetManager *Instance::getMeshManager() {
-        return &pImpl->meshManager;
-    }
+
 }  // namespace g2::gfx

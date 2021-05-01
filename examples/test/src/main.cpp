@@ -33,17 +33,11 @@ int main() {
 
     g2::AssetRegistry assetRegistry;
 
-    assetRegistry.registerManager(gfx.getImageManager());
-    assetRegistry.registerManager(gfx.getMeshManager());
+    for(auto m : gfx.getAssetManagers()) {
+        assetRegistry.registerManager(m);
+    }
 
     assetRegistry.includePath("assets");
-
-
-    std::ifstream pipelineDefInput("assets/pipeline.json.g2ppln", std::ios::binary);
-    std::vector<char> pipelineBytes((std::istreambuf_iterator<char>(pipelineDefInput)),
-                                    (std::istreambuf_iterator<char>()));
-
-    VkPipeline pipeline = gfx.createPipeline(g2::gfx::GetPipelineDef(pipelineBytes.data()));
 
     auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh");
 
@@ -57,9 +51,7 @@ int main() {
     const g2::gfx::MaterialDef *mat = materialMap->materials()->Get(0);
 
     auto image = assetRegistry.getAssetIndex(mat->albedo()->c_str());
-
     auto imageN = assetRegistry.getAssetIndex(mat->normal()->c_str());
-
 
     g2::gfx::DrawItem drawItems[]{
             {
