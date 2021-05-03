@@ -16,23 +16,18 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data
 
     auto& mat = materials[index];
 
-    //TODO modify asset system to support sets of assets from single file
-
     AssetReferencePatch patches[] = {
-            {
-                .name = matDef->albedo()->c_str(),
-                .index = &mat.albedoImage,
-            },
-            {
-                .name = matDef->normal()->c_str(),
-                .index = &mat.normalImage,
-            }
+            {.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,},
+            {.name = matDef->normal()->c_str(), .index = &mat.normalImage,},
+            {.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,},
+            {.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,},
+            {.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,},
     };
 
 
     return AssetAddResult {
         .index = static_cast<uint32_t>(index),
-        .patches = std::vector<AssetReferencePatch>(patches, patches + 2),
+        .patches = std::vector<AssetReferencePatch>(patches, patches + 5),
     };
 
 }
