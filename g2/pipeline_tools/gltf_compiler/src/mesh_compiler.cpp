@@ -1,27 +1,16 @@
 //
-// Created by felix on 25/04/2021.
+// Created by felix on 03/05/2021.
 //
 
-#include <iostream>
-#include <span>
-#include <cstring>
-#include <algorithm>
-
-#include <filesystem>
-
-#define CGLTF_IMPLEMENTATION
-#include <cgltf.h>
-
-#include <cstdint>
-#include <cassert>
-
-#include <flatbuffers/flatbuffers.h>
+#include "mesh_compiler.h"
 #include <g2/gfx/mesh_generated.h>
-#include <fstream>
-#include <regex>
+#include <span>
 
-namespace fs = std::filesystem;
 namespace fb = flatbuffers;
+
+static const char* GLTF_ATTRIBUTE_POSITION = "POSITION";
+static const char* GLTF_ATTRIBUTE_NORMAL = "NORMAL";
+static const char* GLTF_ATTRIBUTE_TEXCOORD = "TEXCOORD_0";
 
 struct Vertex {
     float positions[4];
@@ -29,49 +18,10 @@ struct Vertex {
     float texcoords[4];
 };
 
-static const char* GLTF_ATTRIBUTE_POSITION = "POSITION";
-static const char* GLTF_ATTRIBUTE_NORMAL = "NORMAL";
-static const char* GLTF_ATTRIBUTE_TEXCOORD = "TEXCOORD_0";
 
+std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
-int main(int argc, char* argv[]) {
-
-    if (argc != 4) {
-        std::cerr << "expected 3 arguments. usage: input name output\n";
-        return -1;
-    }
-
-    const fs::path input = argv[1];
-    const char* meshName = argv[2];
-    const fs::path output = argv[3];
-
-    const fs::path directory = input.parent_path();
-
-    cgltf_options options = {};
-    cgltf_data* data{};
-    cgltf_result result = cgltf_parse_file(&options, input.c_str(), &data);
-
-    if(result != cgltf_result_success) {
-        std::cerr << "Error loading file: " << input << "\n";
-        return 1;
-    }
-
-    result = cgltf_load_buffers(&options, data, input.c_str());
-    if(result != cgltf_result_success) {
-        std::cerr << "Error loading buffers for " << input << "error code: " << result << "\n";
-        return 1;
-    }
-
-    auto mesh = std::find_if(data->meshes, data->meshes + data->meshes_count, [meshName](const cgltf_mesh& mesh) {
-        return strcmp(mesh.name, meshName) == 0;
-    });
-
-    if (mesh == data->meshes + data->meshes_count) {
-        std::cerr << "Could not fine mesh " << meshName << " in " << input << "\n";
-        return 1;
-    }
-
-    fb::FlatBufferBuilder fbb(1024 * 1024);
+    fb::FlatBufferBuilder fbb(1024);
 
     std::vector<fb::Offset<g2::gfx::MeshPrimitive>> fbPrimitives;
 
@@ -107,34 +57,8 @@ int main(int argc, char* argv[]) {
         fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, vertices.size(), sizeof(Vertex)));
     }
 
-
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);
-    fbb.Finish(fbMesh);
+    g2::gfx::FinishMeshDataBuffer(fbb, fbMesh);
 
-    {
-        auto buf = fbb.GetBufferPointer();
-        auto buf_size = fbb.GetSize();
-
-        fs::create_directories(output.parent_path());
-
-        std::ofstream ofs(output.c_str(), std::ios::out | std::ios::binary);
-        ofs.write((char*)buf, buf_size);
-    }
-
-    {
-        std::ofstream ofs(output.string() + ".d");
-        std::regex whitespaceRegex("\\s");
-
-        ofs << output.c_str() << " :";
-
-        for(cgltf_buffer& buffer : std::span(data->buffers, data->buffers_count)) {
-            ofs << " " << std::regex_replace((directory / buffer.uri).c_str(), whitespaceRegex, "\\$&");
-        }
-    }
-
-
-
-    cgltf_free(data);
-
-    return 0;
+    return std::vector<uint8_t>(fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize());
 }

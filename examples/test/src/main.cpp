@@ -39,9 +39,9 @@ int main() {
 
     assetRegistry.includePath("assets");
 
-    auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.mesh_helmet_LP_13930damagedHelmet.g2mesh");
+    auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/mesh_helmet_LP_13930damagedHelmet.g2mesh");
 
-    auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf.g2mat");
+    auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/Material_MR.g2mat");
 
     g2::gfx::DrawItem drawItems[]{
             {

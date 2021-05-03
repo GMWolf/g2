@@ -10,11 +10,12 @@
 #include <vector>
 #include <filesystem>
 #include <unordered_map>
+#include <string>
 
 namespace g2 {
 
     struct AssetReferencePatch {
-        const char* name;
+        std::filesystem::path name;
         uint32_t* index;
     };
 

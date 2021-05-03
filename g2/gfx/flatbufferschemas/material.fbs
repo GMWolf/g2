@@ -11,9 +11,4 @@ table MaterialDef {
     emissive: string;
 }
 
-
-table MaterialMap {
-    materials: [MaterialDef];
-}
-
-root_type MaterialMap;
+root_type MaterialDef;

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <g2/archive/g2archive.h>
 
 namespace fs = std::filesystem;
 
@@ -26,8 +27,35 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
     auto& path = searchPaths.emplace_back(pathStr);
     for(auto& p : fs::recursive_directory_iterator(path)) {
-        std::cout  << p.path().c_str() << std::endl;
-        if(auto m = findAssetManager(p.path())) {
+        std::cout << p << std::endl;
+        if (strcmp(p.path().extension().c_str(), ".g2ar") == 0) {
+            std::ifstream stream(p.path().c_str(), std::ios::binary);
+            std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
+                                    (std::istreambuf_iterator<char>()));
+
+            auto archive = archive::GetArchive(bytes.data());
+
+            for(auto entry : *archive->entries()) {
+                std::cout << "\t" << entry->path()->c_str() << std::endl;
+                if (auto m = findAssetManager(fs::path(entry->path()->c_str()))) {
+                    auto contents = std::span((char*)entry->contents()->data(), entry->contents()->size());
+                    AssetAddResult result = m->add_asset(contents);
+
+                    for(auto patch : result.patches) {
+                        std::cout << "\t\t@" << patch.name << std::endl;
+                        patches.push_back(AssetReferencePatch {
+                            .name = p.path() / patch.name,
+                            .index = patch.index,
+                        });
+                    }
+
+                    auto name = p.path().parent_path() / p.path().stem() / entry->path()->c_str();
+                    assetMap.emplace(name.c_str(), result.index);
+                }
+            }
+
+
+        } else if(auto m = findAssetManager(p.path())) {
             std::ifstream stream(p.path().c_str(), std::ios::binary);
             std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
                                         (std::istreambuf_iterator<char>()));
@@ -38,7 +66,8 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
     }
 
     for(auto& patch : patches) {
-        *patch.index = getAssetIndex(patch.name);
+
+        *patch.index = getAssetIndex(patch.name.lexically_normal().c_str());
     }
 
 }

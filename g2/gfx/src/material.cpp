@@ -8,7 +8,7 @@
 
 g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data) {
 
-    auto matDef = g2::gfx::GetMaterialMap(data.data());
+    auto matDef = g2::gfx::GetMaterialDef(data.data());
 
     auto index = nextMaterialId++;
 
@@ -20,11 +20,11 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data
 
     AssetReferencePatch patches[] = {
             {
-                    .name = matDef->materials()->Get(0)->albedo()->c_str(),
-                    .index = &mat.albedoImage,
+                .name = matDef->albedo()->c_str(),
+                .index = &mat.albedoImage,
             },
             {
-                .name = matDef->materials()->Get(0)->normal()->c_str(),
+                .name = matDef->normal()->c_str(),
                 .index = &mat.normalImage,
             }
     };
