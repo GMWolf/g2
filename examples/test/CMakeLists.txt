@@ -16,3 +16,6 @@ g2_add_materials(assets/DamagedHelmet/DamagedHelmet.gltf)
 
 add_custom_target(textures DEPENDS assets/DamagedHelmet/Default_albedo.jpg.ktx2 assets/DamagedHelmet/Default_normal.jpg.ktx2 assets/DamagedHelmet/DamagedHelmet.gltf.g2mat)
 add_dependencies(g2_test textures)
+
+
+g2_add_assets(g2_test_assets assets)
