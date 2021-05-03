@@ -1,0 +1,15 @@
+file_extension "g2ar";
+file_identifier "G2AR";
+namespace g2.archive;
+
+table Entry {
+    id: uint64 (key, hash: "fnv1_64");
+    path: string;
+    contents: [ubyte];
+}
+
+table Archive {
+    entries: [Entry];
+}
+
+root_type Archive;

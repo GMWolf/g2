@@ -30,7 +30,6 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data
     };
 
 
-
     return AssetAddResult {
         .index = static_cast<uint32_t>(index),
         .patches = std::vector<AssetReferencePatch>(patches, patches + 2),
