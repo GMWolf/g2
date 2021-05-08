@@ -789,7 +789,7 @@ namespace g2::gfx {
 
                     drawData[drawIndex] = {
                             .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                            .materialId = pImpl->materialManager.materials[item.material].albedoImage,
+                            .materialId = item.material,
                     };
 
                     vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),

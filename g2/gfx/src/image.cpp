@@ -175,6 +175,7 @@ namespace g2::gfx {
                 std::cout << "not enout space to load, breaking" << std::endl;
                 break;
             } else {
+                std::cout << "queued " << job.data.size_bytes() << "bytes" <<std::endl;
                 jobs.pop_back();
             }
         }

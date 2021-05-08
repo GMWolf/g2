@@ -18,13 +18,19 @@ std::vector<uint8_t> compileMaterial(const cgltf_material *mat) {
     auto metallicRoughnessUri =(fs::path("..") / mat->pbr_metallic_roughness.metallic_roughness_texture.texture->image->uri).concat(".g2img");
     auto normalUri = (fs::path("..") / mat->normal_texture.texture->image->uri).concat(".g2img");
     auto occlusionUri = (fs::path("..") /mat->occlusion_texture.texture->image->uri).concat(".g2img");
-    auto emissiveUri = (fs::path("..") /mat->emissive_texture.texture->image->uri).concat(".g2img");
+
+    fs::path emissiveUri;
+    const char* c_emissiveUri = nullptr;
+    if (mat->emissive_texture.texture) {
+        emissiveUri = (fs::path("..") /mat->emissive_texture.texture->image->uri).concat(".g2img");
+        c_emissiveUri = emissiveUri.c_str();
+    }
 
     auto m = g2::gfx::CreateMaterialDefDirect(fbb, mat->name, albedoUri.c_str(),
                                                          metallicRoughnessUri.c_str(),
                                                          normalUri.c_str(),
                                                          occlusionUri.c_str(),
-                                                         emissiveUri.c_str());
+                                                         c_emissiveUri);
 
     g2::gfx::FinishMaterialDefBuffer(fbb, m);
 

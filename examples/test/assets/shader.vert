@@ -60,7 +60,7 @@ void main() {
     vec3 pos = applyTransform(vertex.pos.xyz, transform);
 
     gl_Position = viewProj * vec4(pos, 1.0);
-    uv = vertices[gl_VertexIndex].texcoords.xy;
+    uv = vertex.texcoords.xy;
     normal = rotate(vertex.normal.rgb, transform.orientation);
     viewDir = viewPos - pos;
 }

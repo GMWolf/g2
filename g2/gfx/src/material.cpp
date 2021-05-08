@@ -16,18 +16,20 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<const char
 
     auto& mat = materials[index];
 
-    AssetReferencePatch patches[] = {
+    std::vector<AssetReferencePatch> patches {
             {.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,},
             {.name = matDef->normal()->c_str(), .index = &mat.normalImage,},
-            {.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,},
             {.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,},
             {.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,},
     };
 
+    if (matDef->emissive()) {
+        patches.push_back({.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,});
+    }
 
     return AssetAddResult {
         .index = static_cast<uint32_t>(index),
-        .patches = std::vector<AssetReferencePatch>(patches, patches + 5),
+        .patches = std::move(patches),
     };
 
 }

@@ -9,8 +9,8 @@
 void g2::gfx::initMeshBuffer(VmaAllocator allocator,
                              g2::gfx::MeshBuffer *meshBuffer) {
 
-  size_t vertexBufferSize = 256 * 1024 * 1024;
-  size_t indexBufferSize = 16 * 1024 * 1024;
+  size_t vertexBufferSize = 512 * 1024 * 1024;
+  size_t indexBufferSize = 64 * 1024 * 1024;
 
   VkBufferCreateInfo vertexBufferInfo {
     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -52,7 +52,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, g2::gfx::MeshBuffer *me
   size_t indexBytes = indexByteSize * indexCount;
 
   auto vertexAlloc = allocateFromLinearBuffer(&meshBuffer->vertexBuffer, vertexBytes, meshFormat->vertexByteSize);
-  assert(vertexAlloc);
+  assert(vertexAlloc.size);
   void* vertexScratch = uploadQueue->queueBufferUpload(vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset);
   memcpy(vertexScratch, vertexData, vertexBytes);
 
@@ -61,6 +61,8 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, g2::gfx::MeshBuffer *me
   assert(indexAlloc.size);
   void* indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
   memcpy(indexScratch, indexData, indexBytes);
+
+  assert((vertexAlloc.offset / meshFormat->vertexByteSize) * meshFormat->vertexByteSize == vertexAlloc.offset);
 
   Primitive prim {
           .meshFormat = *meshFormat,

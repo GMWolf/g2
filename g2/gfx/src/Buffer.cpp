@@ -50,10 +50,25 @@ void g2::gfx::uploadBuffer(VkCommandBuffer cmd, VkBuffer src,
   vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 1, &barrier, 0, nullptr);
 
 }
+
+static int alignTo(int x, int n) {
+    if (x == 0) {
+        return x;
+    }
+
+    int r = x % n;
+
+    if (r == 0)
+        return x;
+
+    return x + n - r;
+}
+
 g2::gfx::BufferRegion g2::gfx::allocateFromLinearBuffer(
     g2::gfx::LinearBuffer *linearBuffer, size_t size, size_t align) {
 
-  const uintptr_t aligned = (linearBuffer->head - 1u + align) & -align;
+
+  const uintptr_t aligned = alignTo(linearBuffer->head, align);
 
   if(aligned + size > linearBuffer->size) {
     return {0, 0};

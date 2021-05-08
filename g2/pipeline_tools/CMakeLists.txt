@@ -12,7 +12,7 @@ function(g2_add_assets target directory)
         list(APPEND ASSETS ${GLTF_FILE}.g2ar)
     endforeach()
 
-    file(GLOB_RECURSE IMAGE_FILES RELATIVE ${CMAKE_CURRENT_LIST_DIR}} CONFIGURE_DEPENDS "*.jpg")
+    file(GLOB_RECURSE IMAGE_FILES RELATIVE ${CMAKE_CURRENT_LIST_DIR}} CONFIGURE_DEPENDS "*.jpg" "*.png")
 
     foreach(IMAGE_FILE IN ITEMS ${IMAGE_FILES})
         g2_add_texture(${IMAGE_FILE})

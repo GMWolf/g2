@@ -44,9 +44,13 @@ int main() {
 
     auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/Material_MR.g2mat");
 
+    auto mesh2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh");
+
+    auto material2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherPartsMat.g2mat");
+
     g2::gfx::DrawItem drawItems[]{
         {.mesh = mesh, .material = material},
-        {.mesh = mesh, .material = material},
+        {.mesh = mesh2, .material = material2},
     };
 
     float r = 0;

@@ -37,7 +37,7 @@ namespace g2::gfx {
             return nullptr;
         }
 
-        auto stagingAlloc = allocateFromLinearBuffer(&stagingBuffer[currentUploadFrame], numBytes, 1);
+        auto stagingAlloc = allocateFromLinearBuffer(&stagingBuffer[currentUploadFrame], numBytes, 16);
         if (!stagingAlloc) {
             return nullptr;
         }
