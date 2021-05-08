@@ -1,10 +1,16 @@
 include "vk.fbs";
+file_extension "g2img";
 
 namespace g2.gfx;
 
-table Texture {
+table Image {
     width: ushort;
     height: ushort;
+    depth: ushort;
+    levels: ubyte;
     format: Format;
     data: [ubyte];
 }
+
+
+root_type Image;

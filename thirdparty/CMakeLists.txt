@@ -46,3 +46,6 @@ add_subdirectory(KTX-Software)
 
 add_library(cgltf INTERFACE)
 target_include_directories(cgltf INTERFACE cgltf)
+
+include(stb.cmake)
+include(bc7e.cmake)

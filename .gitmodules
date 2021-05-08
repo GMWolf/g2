@@ -37,3 +37,9 @@
 [submodule "thirdparty/cgltf"]
 	path = thirdparty/cgltf
 	url = git@github.com:jkuhlmann/cgltf.git
+[submodule "thirdparty/bc7e"]
+	path = thirdparty/bc7e
+	url = git@github.com:BinomialLLC/bc7e.git
+[submodule "thirdparty/stb"]
+	path = thirdparty/stb
+	url = git@github.com:nothings/stb.git

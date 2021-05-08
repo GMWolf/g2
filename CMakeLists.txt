@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(g2)
+project(g2 C CXX ISPC)
 
 set(CMAKE_CXX_STANDARD 20)
 

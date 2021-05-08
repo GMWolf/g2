@@ -31,6 +31,7 @@
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Headers" />
       <file path="$PROJECT_DIR$/thirdparty/SPIRV-Tools" />
       <file path="$PROJECT_DIR$/thirdparty/VulkanMemoryAllocator" />
+      <file path="$PROJECT_DIR$/thirdparty/bc7e" />
       <file path="$PROJECT_DIR$/thirdparty/cgltf" />
       <file path="$PROJECT_DIR$/thirdparty/flatbuffers" />
       <file path="$PROJECT_DIR$/thirdparty/glfw" />
@@ -38,6 +39,7 @@
       <file path="$PROJECT_DIR$/thirdparty/glslang" />
       <file path="$PROJECT_DIR$/thirdparty/rapidjson" />
       <file path="$PROJECT_DIR$/thirdparty/shaderc" />
+      <file path="$PROJECT_DIR$/thirdparty/stb" />
       <file path="$PROJECT_DIR$/thirdparty/volk" />
       <file path="$PROJECT_DIR$/thirdparty/yaml-cpp" />
     </libraryRoots>
