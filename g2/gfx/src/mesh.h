@@ -55,7 +55,7 @@ struct MeshAssetManager : public IAssetManager{
 
     std::vector<Mesh> meshes;
 
-    AssetAddResult add_asset(std::span<char> data) override;
+    AssetAddResult add_asset(std::span<const char> data) override;
     const char *ext() override;
 };
 

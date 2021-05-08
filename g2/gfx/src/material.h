@@ -29,7 +29,7 @@ namespace g2::gfx {
 
         Material* materials;
 
-        AssetAddResult add_asset(std::span<char> data) override;
+        AssetAddResult add_asset(std::span<const char> data) override;
 
         const char *ext() override;
     };

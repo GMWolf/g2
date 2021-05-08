@@ -94,7 +94,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer,
     return mesh;
 }
 
-g2::AssetAddResult g2::gfx::MeshAssetManager::add_asset(std::span<char> data) {
+g2::AssetAddResult g2::gfx::MeshAssetManager::add_asset(std::span<const char> data) {
     auto meshData = g2::gfx::GetMeshData(data.data());
 
     auto& mesh = meshes.emplace_back(addMesh(uploadQueue, meshBuffer, meshData));

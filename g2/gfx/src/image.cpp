@@ -22,7 +22,7 @@ static VkImageType getImageTypeFromDimensions(uint32_t dim) {
 };
 
 
-g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<char> data) {
+g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<const char> data) {
 
 
     const ImageDef* imageDef = GetImageDef(data.data());
@@ -123,7 +123,7 @@ g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, Vma
 
 }
 
-g2::AssetAddResult g2::gfx::ImageAssetManager::add_asset(std::span<char> data) {
+g2::AssetAddResult g2::gfx::ImageAssetManager::add_asset(std::span<const char> data) {
 
     auto& image = images.emplace_back(loadImage(device, uploadQueue, allocator, data));
 

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <g2/archive/g2archive.h>
+#include <g2/file.h>
 
 namespace fs = std::filesystem;
 
@@ -25,13 +26,16 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
     std::vector<AssetReferencePatch> patches;
 
-    auto& path = searchPaths.emplace_back(pathStr);
+    fs::path path(pathStr);
+
+    auto& sources = sourcesMap[path];
+
     for(auto& p : fs::recursive_directory_iterator(path)) {
         if (strcmp(p.path().extension().c_str(), ".g2ar") == 0) {
             std::cout << p << std::endl;
-            std::ifstream stream(p.path().c_str(), std::ios::binary);
-            std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
-                                    (std::istreambuf_iterator<char>()));
+
+           auto bytes = map(p.path().c_str());
+           sources.push_back({p.path(), bytes});
 
             auto archive = archive::GetArchive(bytes.data());
 
@@ -57,9 +61,10 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
         } else if(auto m = findAssetManager(p.path())) {
             std::cout << p << std::endl;
-            std::ifstream stream(p.path().c_str(), std::ios::binary);
-            std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
-                                        (std::istreambuf_iterator<char>()));
+
+            auto bytes = map(p.path().c_str());
+            sources.push_back({p.path(), bytes});
+
             AssetAddResult result = m->add_asset(bytes);
             patches.insert(patches.end(), result.patches.begin(), result.patches.end());
             assetMap.emplace(p.path().c_str(), result.index);
@@ -67,7 +72,6 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
     }
 
     for(auto& patch : patches) {
-
         *patch.index = getAssetIndex(patch.name.lexically_normal().c_str());
     }
 

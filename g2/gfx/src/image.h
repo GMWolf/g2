@@ -21,7 +21,7 @@ namespace g2::gfx {
         VkImageView view;
     };
 
-    Image loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<char> data);
+    Image loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<const char> data);
 
 
     struct ImageAssetManager : public IAssetManager {
@@ -35,7 +35,7 @@ namespace g2::gfx {
 
         std::vector<Image> images;
 
-        AssetAddResult add_asset(std::span<char> data) override;
+        AssetAddResult add_asset(std::span<const char> data) override;
         const char *ext() override;
     };
 

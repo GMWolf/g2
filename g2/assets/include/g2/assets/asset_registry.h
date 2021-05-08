@@ -25,8 +25,13 @@ namespace g2 {
     };
 
     struct IAssetManager {
-        virtual AssetAddResult add_asset(std::span<char> data) = 0;
+        virtual AssetAddResult add_asset(std::span<const char> data) = 0;
         virtual const char* ext() = 0;
+    };
+
+    struct AssetSource {
+        std::filesystem::path path;
+        std::span<const char> data;
     };
 
     class AssetRegistry {
@@ -37,7 +42,7 @@ namespace g2 {
     private:
         IAssetManager* findAssetManager(const std::filesystem::path& path);
 
-        std::vector<std::filesystem::path> searchPaths;
+        std::unordered_map<std::string , std::vector<AssetSource>> sourcesMap;
         std::vector<IAssetManager*> assetManagers;
         std::unordered_map<std::string, uint32_t> assetMap;
     };

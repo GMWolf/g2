@@ -6,7 +6,7 @@
 #include <g2/gfx/material_generated.h>
 
 
-g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data) {
+g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<const char> data) {
 
     auto matDef = g2::gfx::GetMaterialDef(data.data());
 
