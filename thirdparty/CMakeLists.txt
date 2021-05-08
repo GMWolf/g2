@@ -49,3 +49,5 @@ target_include_directories(cgltf INTERFACE cgltf)
 
 include(stb.cmake)
 include(bc7e.cmake)
+
+add_subdirectory(zstd/build/cmake)

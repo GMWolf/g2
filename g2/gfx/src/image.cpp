@@ -6,9 +6,7 @@
 #include "Buffer.h"
 #include <cstring>
 #include <vector>
-#include <cassert>
-#include <g2/gfx_instance.h>
-#include <iostream>
+#include <zstd.h>
 #include <g2/gfx/image_generated.h>
 
 static VkImageType getImageTypeFromDimensions(uint32_t dim) {
@@ -92,9 +90,9 @@ g2::gfx::Image g2::gfx::loadImage(VkDevice device, UploadQueue* uploadQueue, Vma
     }
 
 
-    void* scratchPtr = uploadQueue->queueImageUpload(imageDef->data()->size(), image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, copyRegions);
-
-    memcpy(scratchPtr, imageDef->data()->data(), imageDef->data()->size());
+    auto dataSize = ZSTD_getDecompressedSize(imageDef->data()->data(), imageDef->data()->size());
+    void* scratchPtr = uploadQueue->queueImageUpload(dataSize, image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, copyRegions);
+    ZSTD_decompress(scratchPtr, dataSize, imageDef->data()->data(), imageDef->data()->size());
 
     VkImageSubresourceRange imageRange {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

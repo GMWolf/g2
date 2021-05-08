@@ -14,6 +14,8 @@
 #include <g2/gfx/image_generated.h>
 #include <fstream>
 
+#include <zstd.h>
+
 namespace fs = std::filesystem;
 namespace fb = flatbuffers;
 
@@ -72,9 +74,14 @@ int main(int argc, char* argv[]) {
 
     stbi_image_free(data);
 
+    //Compress the data with zstd
+    std::vector<uint8_t> compressedImage(ZSTD_compressBound(packedImage.size()));
+    auto compressedSize = ZSTD_compress(compressedImage.data(), compressedImage.size(), packedImage.data(), packedImage.size(), ZSTD_maxCLevel());
+    compressedImage.resize(compressedSize);
+
     fb::FlatBufferBuilder fbb(packedImage.size() * blockByteSize + 2048);
 
-    auto image = g2::gfx::CreateImageDefDirect(fbb, imageWidth, imageHeight, 1, 1, g2::gfx::Format::bc7_srgb, &packedImage); // TODO non srgb textures
+    auto image = g2::gfx::CreateImageDefDirect(fbb, imageWidth, imageHeight, 1, 1, g2::gfx::Format::bc7_srgb, &compressedImage); // TODO non srgb textures
 
     g2::gfx::FinishImageDefBuffer(fbb, image);
 

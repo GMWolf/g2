@@ -42,6 +42,7 @@
       <file path="$PROJECT_DIR$/thirdparty/stb" />
       <file path="$PROJECT_DIR$/thirdparty/volk" />
       <file path="$PROJECT_DIR$/thirdparty/yaml-cpp" />
+      <file path="$PROJECT_DIR$/thirdparty/zstd" />
     </libraryRoots>
     <excludeRoots>
       <file path="$PROJECT_DIR$/build" />

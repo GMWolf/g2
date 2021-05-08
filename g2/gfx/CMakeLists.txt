@@ -26,12 +26,15 @@ add_library(g2_gfx
         src/descriptors.h
         src/image.cpp
         src/image.h
-        src/upload.cpp src/upload.h src/material.cpp src/material.h)
+        src/upload.cpp
+        src/upload.h
+        src/material.cpp
+        src/material.h)
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp
         src/validation.cpp)
 
 target_include_directories(g2_gfx PUBLIC include)
-target_link_libraries(g2_gfx PRIVATE vulkan vma g2_util)
+target_link_libraries(g2_gfx PRIVATE vulkan vma g2_util libzstd_static)
 target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs g2_assets)
