@@ -338,9 +338,14 @@ namespace g2::gfx {
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
         {
+            struct UScene{
+                glm::mat4 mat;
+                glm::vec3 viewPos;
+            } *scene;
+
             VkBufferCreateInfo bufferCreateInfo {
                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                    .size = sizeof(glm::mat4) + sizeof(glm::vec3),
+                    .size = sizeof(UScene),
                     .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             };
@@ -351,10 +356,7 @@ namespace g2::gfx {
 
 
             createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer);
-            struct {
-                glm::mat4 mat;
-                glm::vec3 viewPos;
-            } *scene;
+
             vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&scene);
             glm::vec3 viewPos = glm::vec3(0,2,0);
             auto view = glm::lookAt(viewPos, glm::vec3(0,0,0), glm::vec3(0,0,1));
@@ -606,6 +608,8 @@ namespace g2::gfx {
 
         assert(drawItems.size() == transforms.size());
 
+        pImpl->imageManager.runJobs();
+
         pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
 
         vkWaitForFences(pImpl->vkDevice, 1,
@@ -769,27 +773,31 @@ namespace g2::gfx {
 
 
         //Do a draw now
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelineAssetManager.pipelines[0]);
+        if (!drawItems.empty()) {
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelineAssetManager.pipelines[0]);
 
 
-        memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
+            memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
 
-        DrawData* drawData = pImpl->drawDataMap[pImpl->currentFrame];
+            DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
 
-        uint32_t drawIndex = 0;
-        for(DrawItem& item : drawItems) {
-            Mesh mesh = pImpl->meshManager.meshes[item.mesh];
-            for(Primitive& prim : mesh.primitives) {
+            uint32_t drawIndex = 0;
+            for (DrawItem &item : drawItems) {
+                Mesh mesh = pImpl->meshManager.meshes[item.mesh];
+                for (Primitive &prim : mesh.primitives) {
 
-                drawData[drawIndex] = {
-                        .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                        .materialId = pImpl->materialManager.materials[item.material].albedoImage,
-                };
+                    drawData[drawIndex] = {
+                            .baseVertex = static_cast<uint32_t>(prim.baseVertex),
+                            .materialId = pImpl->materialManager.materials[item.material].albedoImage,
+                    };
 
-                vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t), &drawIndex);
-                vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),
+                                       &drawIndex);
+                    vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
 
-                drawIndex++;
+                    drawIndex++;
+                }
             }
         }
 

@@ -13,18 +13,22 @@
 
 namespace g2::gfx {
 
-
-
     struct Image {
         VkImage image;
         VmaAllocation allocation;
         VkImageView view;
     };
 
-    Image loadImage(VkDevice device, UploadQueue* uploadQueue, VmaAllocator allocator, std::span<const char> data);
-
 
     struct ImageAssetManager : public IAssetManager {
+
+        struct UploadJob {
+            VkImage image;
+            std::vector<VkBufferImageCopy> copyRegions;
+            std::span<const uint8_t> data;
+        };
+
+        std::vector<UploadJob> jobs;
 
         // TODO remove these members and use a queue queried from gfx instance.
         VkDevice device;
@@ -34,6 +38,8 @@ namespace g2::gfx {
         VkSampler sampler;
 
         std::vector<Image> images;
+
+        void runJobs();
 
         AssetAddResult add_asset(std::span<const char> data) override;
         const char *ext() override;

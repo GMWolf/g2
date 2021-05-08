@@ -29,6 +29,10 @@ namespace g2::gfx {
 
     void *UploadQueue::queueImageUpload(size_t numBytes, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, std::span<VkBufferImageCopy> regions) {
 
+        if (waiting) {
+            return nullptr;
+        }
+
         if (regions.empty()) {
             return nullptr;
         }
@@ -115,6 +119,24 @@ namespace g2::gfx {
 
     void  UploadQueue::submit(VkDevice device, VkQueue queue) {
 
+        if (waiting) {
+            if (vkGetFenceStatus(device, fences[currentUploadFrame]) == VK_SUCCESS) {
+                vkResetCommandBuffer(commandBuffers[currentUploadFrame], 0);
+
+                VkCommandBufferBeginInfo beginInfo{
+                        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                        .pInheritanceInfo = nullptr,
+                };
+                vkBeginCommandBuffer(commandBuffers[currentUploadFrame], &beginInfo);
+                stagingBuffer[currentUploadFrame].head = 0;
+
+                waiting = false;
+            } else {
+                return;
+            }
+        }
+
         if (workCount > 0) {
             vkEndCommandBuffer(commandBuffers[currentUploadFrame]);
 
@@ -129,25 +151,14 @@ namespace g2::gfx {
             vkResetFences(device, 1, &fences[currentUploadFrame]);
             vkQueueSubmit(queue, 1, &submitInfo, fences[currentUploadFrame]);
 
-
             workCount = 0;
             // Acquire new upload frame
-            if (++currentUploadFrame > uploadFrameCount) {
+            if (++currentUploadFrame >= uploadFrameCount) {
                 currentUploadFrame = 0;
             }
 
-            vkWaitForFences(device, 1, &fences[currentUploadFrame], VK_TRUE, UINT64_MAX);
-            vkResetCommandBuffer(commandBuffers[currentUploadFrame], 0);
-            VkCommandBufferBeginInfo beginInfo{
-                    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-                    .pInheritanceInfo = nullptr,
-            };
-            vkBeginCommandBuffer(commandBuffers[currentUploadFrame], &beginInfo);
-            stagingBuffer[currentUploadFrame].head = 0;
+            waiting = true;
         }
-
-
     }
 
 

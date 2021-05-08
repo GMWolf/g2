@@ -15,7 +15,7 @@ namespace g2::gfx {
     struct UploadQueue {
         // Upload queue works in upload frames. They are separate frames to graphics frames
         static const uint32_t uploadFrameCount = 4;
-        static const size_t stagingBufferSize = 40 * 1024 * 1024;
+        static const size_t stagingBufferSize = 4 * 1024 * 1024;
         uint32_t currentUploadFrame;
 
         VkFence fences[uploadFrameCount];
@@ -29,6 +29,8 @@ namespace g2::gfx {
         void* queueBufferUpload(size_t numBytes, VkBuffer buffer, size_t offset);
         void* queueImageUpload(size_t numBytes,  VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, std::span<VkBufferImageCopy> regions);
         void submit(VkDevice device, VkQueue queue);
+
+        bool waiting = false;
     };
 
     void createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue);

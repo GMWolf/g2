@@ -7,6 +7,7 @@
     <mapping directory="$PROJECT_DIR$/thirdparty/SPIRV-Headers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/SPIRV-Tools" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/VulkanMemoryAllocator" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/thirdparty/bc7e" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/cgltf" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/flatbuffers" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/glfw" vcs="Git" />
@@ -14,6 +15,8 @@
     <mapping directory="$PROJECT_DIR$/thirdparty/glslang" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/rapidjson" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/shaderc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/thirdparty/stb" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/thirdparty/volk" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/thirdparty/zstd" vcs="Git" />
   </component>
 </project>

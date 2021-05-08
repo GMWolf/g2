@@ -11,6 +11,7 @@
 #include <g2/gfx/mesh_generated.h>
 #include <g2/gfx/material_generated.h>
 #include <g2/assets/asset_registry.h>
+#include <unistd.h>
 
 int main() {
     g2::ApplicationConfiguration appConfig{
@@ -29,7 +30,7 @@ int main() {
     };
 
     auto gfx = g2::gfx::Instance(gfxConfig);
-
+    
 
     g2::AssetRegistry assetRegistry;
 
@@ -47,7 +48,6 @@ int main() {
         {.mesh = mesh, .material = material},
         {.mesh = mesh, .material = material},
     };
-
 
     float r = 0;
 

@@ -12,7 +12,7 @@ void g2::gfx::createBuffer(VmaAllocator allocator,
 
   vmaCreateBuffer(allocator, bufferCreateInfo, allocationCreateInfo, &buffer->buffer, &buffer->allocation, &allocInfo);
 
-  buffer->size = allocInfo.size;
+  buffer->size = bufferCreateInfo->size;
 
 }
 
