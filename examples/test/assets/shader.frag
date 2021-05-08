@@ -55,10 +55,11 @@ void main() {
 
     LightFragment light;
     light.lightDirection = -normalize(vec3(0.75, -1, 0));
-    light.radiance = vec3(1.0f);
+    light.radiance = vec3(1.0);
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
+    vec3 ambient =  pbr.albedo * vec3(0.01) * texture(textures[material.occlusion], uv).r;
 
 
-    outColor = vec4(col, 1.0);
+    outColor = vec4(col + ambient, 1.0);
 }
