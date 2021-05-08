@@ -20,7 +20,7 @@ namespace fb = flatbuffers;
 
 void getBlock(stbi_uc* data, int bx, int by, int imageWidth, uint32_t* out) {
     for(uint32_t y = 0; y < 4; y++) {
-        memcpy(out + y * 4, data + (by * imageWidth * 4 + bx * 4), 16 * sizeof(uint32_t));
+        memcpy(out + y * 4, data + (((by * 4) * imageWidth + (bx * 4)) * 4), 4 * sizeof(uint32_t));
     }
 }
 
@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
     fs::path input = argv[1];
     fs::path output = argv[2];
 
-    int x, y, comp;
-    stbi_uc* data = stbi_load(input.c_str(), &x, &y, &comp, 4);
+    int imageWidth, imageHeight, comp;
+    stbi_uc* data = stbi_load(input.c_str(), &imageWidth, &imageHeight, &comp, 4);
 
     ispc::bc7e_compress_block_init();
 
@@ -44,10 +44,12 @@ int main(int argc, char* argv[]) {
 
     ispc::bc7e_compress_block_params_init_basic(&bc7e_params, false); //TODO enable perceptual for colour information
 
-    uint32_t blocksX = x / 4;
-    uint32_t blocksY = y / 4;
+    uint32_t blocksX = imageWidth / 4;
+    uint32_t blocksY = imageHeight / 4;
 
-    std::vector<uint8_t> packedImage(blocksX * blocksY * 16);
+    const size_t blockByteSize = 16;
+
+    std::vector<uint8_t> packedImage(blocksX * blocksY * blockByteSize);
 
     for(int32_t by = 0; by < blocksY; by++) {
 
@@ -57,24 +59,24 @@ int main(int argc, char* argv[]) {
 
             uint32_t numBlocks = std::min<uint32_t>(blocksX - bx, N);
 
-            uint32_t pixelBlocks[16 * N];
+            uint32_t pixels[16 * N];
 
             for(uint32_t b = 0; b < numBlocks; b++) {
-                getBlock(data, bx + b, by, x, pixelBlocks + b * 16);
+                getBlock(data, bx + b, by, imageWidth, pixels + b * 16);
             }
 
-            uint64_t* packedBlock = reinterpret_cast<uint64_t*>(packedImage.data() + (bx + by * blocksX) * 16);
-            ispc::bc7e_compress_blocks(numBlocks, packedBlock, pixelBlocks, &bc7e_params);
+            uint64_t* packedBlock = reinterpret_cast<uint64_t*>(packedImage.data() + ((bx + by * blocksX) * blockByteSize));
+            ispc::bc7e_compress_blocks(numBlocks, packedBlock, pixels, &bc7e_params);
         }
     }
 
     stbi_image_free(data);
 
-    fb::FlatBufferBuilder fbb(packedImage.size() * 16 + 1024);
+    fb::FlatBufferBuilder fbb(packedImage.size() * blockByteSize + 2048);
 
-    auto image = g2::gfx::CreateImageDirect(fbb, x, y, 1, 1, g2::gfx::Format::bc7_srgb, &packedImage); // TODO non srgb textures
+    auto image = g2::gfx::CreateImageDefDirect(fbb, imageWidth, imageHeight, 1, 1, g2::gfx::Format::bc7_srgb, &packedImage); // TODO non srgb textures
 
-    g2::gfx::FinishImageBuffer(fbb, image);
+    g2::gfx::FinishImageDefBuffer(fbb, image);
 
     {
         auto buf = fbb.GetBufferPointer();

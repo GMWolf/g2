@@ -27,8 +27,8 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
     auto& path = searchPaths.emplace_back(pathStr);
     for(auto& p : fs::recursive_directory_iterator(path)) {
-        std::cout << p << std::endl;
         if (strcmp(p.path().extension().c_str(), ".g2ar") == 0) {
+            std::cout << p << std::endl;
             std::ifstream stream(p.path().c_str(), std::ios::binary);
             std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
                                     (std::istreambuf_iterator<char>()));
@@ -56,6 +56,7 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
 
         } else if(auto m = findAssetManager(p.path())) {
+            std::cout << p << std::endl;
             std::ifstream stream(p.path().c_str(), std::ios::binary);
             std::vector<char> bytes((std::istreambuf_iterator<char>(stream)),
                                         (std::istreambuf_iterator<char>()));

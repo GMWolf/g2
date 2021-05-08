@@ -37,6 +37,7 @@ enum BlendOp : ubyte
 // vkFormat
 enum Format : ushort {
     undefined = 0,
+    rgba_u8 = 37,
     bc7_unorm = 145,
     bc7_srgb = 146,
     display = 65535,

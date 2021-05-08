@@ -33,5 +33,5 @@ target_sources(g2_gfx PRIVATE
         src/validation.cpp)
 
 target_include_directories(g2_gfx PUBLIC include)
-target_link_libraries(g2_gfx PRIVATE vulkan vma ktx g2_util)
+target_link_libraries(g2_gfx PRIVATE vulkan vma g2_util)
 target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs g2_assets)

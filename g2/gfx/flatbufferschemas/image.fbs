@@ -3,7 +3,7 @@ file_extension "g2img";
 
 namespace g2.gfx;
 
-table Image {
+table ImageDef {
     width: ushort;
     height: ushort;
     depth: ushort;
@@ -13,4 +13,4 @@ table Image {
 }
 
 
-root_type Image;
+root_type ImageDef;
