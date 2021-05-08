@@ -13,7 +13,7 @@ namespace g2::gfx {
 
     static VkDescriptorSetLayoutBinding resourceDescriptorSetLayouts[]{
             // Vertex Data
-            VkDescriptorSetLayoutBinding{
+            VkDescriptorSetLayoutBinding {
                     .binding = 0,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .descriptorCount = 1,
@@ -21,11 +21,19 @@ namespace g2::gfx {
                     .pImmutableSamplers = nullptr,
             },
             // Textures
-            VkDescriptorSetLayoutBinding  {
+            VkDescriptorSetLayoutBinding {
                 .binding = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = imageDescriptorCount,
                 .stageFlags = VK_SHADER_STAGE_ALL,
+                .pImmutableSamplers = nullptr,
+            },
+            // Material
+            VkDescriptorSetLayoutBinding {
+                .binding = 2,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
                 .pImmutableSamplers = nullptr,
             }
     };
@@ -33,12 +41,13 @@ namespace g2::gfx {
     static VkDescriptorBindingFlags resourceDescriptorBindingFlags[] {
         0,
         VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+        0,
     };
 
     static VkDescriptorPoolSize resourcePoolSizes[] {
             VkDescriptorPoolSize {
                 .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .descriptorCount = 1,
+                .descriptorCount = 2,
             },
             VkDescriptorPoolSize {
                     .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

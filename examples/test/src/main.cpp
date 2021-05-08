@@ -44,14 +44,8 @@ int main() {
     auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/Material_MR.g2mat");
 
     g2::gfx::DrawItem drawItems[]{
-            {
-                    .mesh = mesh,
-                    .material = material,
-            },
-            {
-                    .mesh = mesh,
-                    .material = material,
-            }
+        {.mesh = mesh, .material = material},
+        {.mesh = mesh, .material = material},
     };
 
 
@@ -78,7 +72,6 @@ int main() {
         gfx.draw(drawItems, transforms);
 
         r += 0.0001;
-
     }
 
 }

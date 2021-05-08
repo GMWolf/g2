@@ -6,6 +6,18 @@ layout(location = 0) in vec2 uv;
 
 layout(set = 0, binding = 1)  uniform sampler2D textures[];
 
+struct MaterialData {
+    uint albedo;
+    uint normal;
+    uint metallicRoughness;
+    uint occlusion;
+    uint emmisive;
+};
+
+layout(set = 0, binding = 2) buffer MaterialDataBuffer {
+    MaterialData materials[];
+};
+
 struct DrawData {
     uint baseVertex;
     uint materialIndex;
@@ -21,13 +33,13 @@ layout( push_constant ) uniform PusConstant {
 };
 
 
-
-
 layout(location = 0) out vec4 outColor;
 
 void main() {
 
     DrawData d = drawData[drawIndex];
 
-    outColor = vec4(texture(textures[d.materialIndex], uv).rgb, 1.0);
+    MaterialData material = materials[d.materialIndex];
+
+    outColor = vec4(texture(textures[material.metallicRoughness], uv).rgb, 1.0);
 }

@@ -24,8 +24,10 @@ namespace g2::gfx {
 
     struct MaterialAssetManager : public IAssetManager {
 
-        g2::hat<Material> materials;
+        //g2::hat<Material> materials;
         size_t nextMaterialId = 0;
+
+        Material* materials;
 
         AssetAddResult add_asset(std::span<char> data) override;
 

@@ -12,7 +12,7 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<char> data
 
     auto index = nextMaterialId++;
 
-    materials.emplace(index);
+    //materials.emplace(index);
 
     auto& mat = materials[index];
 

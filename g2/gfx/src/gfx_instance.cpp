@@ -75,6 +75,8 @@ namespace g2::gfx {
         DrawData* drawDataMap[MAX_FRAMES_IN_FLIGHT];
         Buffer transformBuffer[MAX_FRAMES_IN_FLIGHT];
         Transform* transformBufferMap[MAX_FRAMES_IN_FLIGHT];
+        Buffer materialBuffer;
+        Material* materialBufferMap;
 
 
         VkCommandPool commandPool;
@@ -396,6 +398,23 @@ namespace g2::gfx {
 
         }
 
+        {
+            VkBufferCreateInfo bufferCreateInfo {
+                    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                    .size = sizeof(Material) * 2048, // TODO material count
+                    .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            };
+
+            VmaAllocationCreateInfo bufferAllocInfo {
+                    .usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+            };
+
+            createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->materialBuffer);
+            vmaMapMemory(pImpl->allocator, pImpl->materialBuffer.allocation, (void**)&pImpl->materialBufferMap);
+        }
+
+
 
         VkSamplerCreateInfo samplerInfo{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -428,6 +447,9 @@ namespace g2::gfx {
             pImpl->pipelineAssetManager.layout = pImpl->descriptors.pipelineLayout;
             pImpl->pipelineAssetManager.device = pImpl->vkDevice;
         }
+        {
+            pImpl->materialManager.materials = pImpl->materialBufferMap;
+        }
 
         pImpl->assetManagers[0] = &pImpl->imageManager;
         pImpl->assetManagers[1] = &pImpl->pipelineAssetManager;
@@ -436,13 +458,17 @@ namespace g2::gfx {
 
         {
             //update set
-            VkDescriptorBufferInfo bufferInfo{
+            VkDescriptorBufferInfo meshBufferInfo{
                     .buffer = pImpl->meshBuffer.vertexBuffer.buffer,
                     .offset = 0,
                     .range = pImpl->meshBuffer.vertexBuffer.size,
             };
 
-
+            VkDescriptorBufferInfo materialBufferInfo{
+                    .buffer = pImpl->materialBuffer.buffer,
+                    .offset = 0,
+                    .range = pImpl->materialBuffer.size,
+            };
 
             VkWriteDescriptorSet descriptorWrites[]{
                 {
@@ -453,12 +479,25 @@ namespace g2::gfx {
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .pImageInfo = nullptr,
-                    .pBufferInfo = &bufferInfo,
+                    .pBufferInfo = &meshBufferInfo,
                     .pTexelBufferView = nullptr
+                },
+                {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = pImpl->descriptors.resourceDescriptorSet,
+                        .dstBinding = 2,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                        .pImageInfo = nullptr,
+                        .pBufferInfo = &materialBufferInfo,
+                        .pTexelBufferView = nullptr
                 },
             };
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, 1, descriptorWrites, 0, nullptr);
+
+
+            vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
 
             std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT * 3);
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
