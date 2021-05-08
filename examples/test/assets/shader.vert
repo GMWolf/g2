@@ -12,6 +12,7 @@ layout(set = 0, binding = 0) buffer Vertices {
 
 layout(set = 1, binding = 0) uniform Scene {
     mat4 viewProj;
+    vec3 viewPos;
 };
 
 struct DrawData {
@@ -47,14 +48,19 @@ layout( push_constant ) uniform PusConstant {
 };
 
 layout(location = 0) out vec2 uv;
+layout(location = 1) out vec3 normal;
+layout(location = 2) out vec3 viewDir;
 
 void main() {
-
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
     Vertex vertex = vertices[vertexIndex];
 
     Transform transform = transforms[drawIndex];
 
-    gl_Position = viewProj * vec4(applyTransform(vertex.pos.xyz, transform), 1.0);
+    vec3 pos = applyTransform(vertex.pos.xyz, transform);
+
+    gl_Position = viewProj * vec4(pos, 1.0);
     uv = vertices[gl_VertexIndex].texcoords.xy;
+    normal = rotate(vertex.normal.rgb, transform.orientation);
+    viewDir = viewPos - pos;
 }

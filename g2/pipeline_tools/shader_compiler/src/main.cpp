@@ -17,7 +17,46 @@
 namespace fs = std::filesystem;
 namespace json = rapidjson;
 
+struct ShaderIncluder : public shaderc::CompileOptions::IncluderInterface {
 
+    struct ResultContainer {
+        shaderc_include_result result;
+        std::string sourceName;
+        std::string contents;
+    };
+
+    shaderc_include_result *
+    GetInclude(const char *requested_source, shaderc_include_type type, const char *requesting_source,
+               size_t include_depth) override {
+        auto path = fs::path(requesting_source).parent_path() / requested_source;
+        std::ifstream stream(path);
+
+        auto result = new ResultContainer;
+        result->sourceName = path.filename().string();
+
+        if (stream) {
+            result->contents = std::string((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+            result->result.content = result->contents.c_str();
+            result->result.content_length = result->contents.length();
+            result->result.source_name = result->sourceName.c_str();
+            result->result.source_name_length = result->sourceName.length();
+        } else {
+            result->result.content = nullptr;
+            result->result.content_length = 0;
+            result->result.source_name = nullptr;
+            result->result.source_name_length = 0;
+        }
+
+        result->result.user_data = result;
+
+
+        return &result->result;
+    }
+
+    void ReleaseInclude(shaderc_include_result *data) override {
+        delete (ResultContainer*)data->user_data;
+    }
+};
 
 
 
@@ -40,6 +79,7 @@ int main(int argc, char* argv[]) {
 
   shaderc::Compiler compiler;
   shaderc::CompileOptions options;
+  options.SetIncluder(std::make_unique<ShaderIncluder>());
   options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 
 
@@ -47,7 +87,12 @@ int main(int argc, char* argv[]) {
   auto vertexFile =  inputDir / shader["vertex"].GetString();
   std::string vertexSource;
   g2::readFile(vertexFile.c_str(), vertexSource);
-  auto vertexResult = compiler.CompileGlslToSpv(vertexSource, shaderc_vertex_shader, vertexFile.c_str(), options);
+  auto vertexPreprocessResult = compiler.PreprocessGlsl(vertexSource, shaderc_vertex_shader, vertexFile.c_str(), options);
+  if (vertexPreprocessResult.GetCompilationStatus() != shaderc_compilation_status_success) {
+      std::cerr << vertexPreprocessResult.GetErrorMessage() << "\n";
+      return -1;
+  }
+  auto vertexResult = compiler.CompileGlslToSpv({vertexPreprocessResult.cbegin(), vertexPreprocessResult.cend()}, shaderc_vertex_shader, vertexFile.c_str(), options);
   if(vertexResult.GetCompilationStatus() != shaderc_compilation_status_success) {
     std::cerr << vertexResult.GetErrorMessage() << "\n";
     return -1;
@@ -57,7 +102,12 @@ int main(int argc, char* argv[]) {
   auto fragmentFile = inputDir / shader["fragment"].GetString();
   std::string fragmentSource;
   g2::readFile(fragmentFile.c_str(), fragmentSource);
-  auto fragmentResult = compiler.CompileGlslToSpv(fragmentSource, shaderc_fragment_shader, fragmentFile.c_str(), options);
+  auto fragmentPreprocessResult = compiler.PreprocessGlsl(fragmentSource, shaderc_fragment_shader, fragmentFile.c_str(), options);
+  if (fragmentPreprocessResult.GetCompilationStatus() != shaderc_compilation_status_success) {
+      std::cerr << fragmentPreprocessResult.GetErrorMessage() << "\n";
+      return -1;
+  }
+  auto fragmentResult = compiler.CompileGlslToSpv({fragmentPreprocessResult.cbegin(), fragmentPreprocessResult.cend()}, shaderc_fragment_shader, fragmentFile.c_str(), options);
   if(fragmentResult.GetCompilationStatus() != shaderc_compilation_status_success) {
     std::cerr << fragmentResult.GetErrorMessage() << "\n";
     return -1;

@@ -60,7 +60,7 @@ int main() {
                 {
                         .pos = {1, 0, 0},
                         .scale = 1.0f,
-                        .orientation = glm::quat(glm::vec3(0, r, 0)),
+                        .orientation = glm::quat(glm::vec3(0, 0, r)),
                 },
                 {
                         .pos = {-1, 0, 0},

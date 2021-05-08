@@ -340,7 +340,7 @@ namespace g2::gfx {
         {
             VkBufferCreateInfo bufferCreateInfo {
                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                    .size = sizeof(glm::mat4),
+                    .size = sizeof(glm::mat4) + sizeof(glm::vec3),
                     .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             };
@@ -351,12 +351,19 @@ namespace g2::gfx {
 
 
             createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer);
-            glm::mat4* mat;
-            vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&mat);
-            auto view = glm::lookAt(glm::vec3(0,0,-2), glm::vec3(0,0,0), glm::vec3(0,1,0));
+            struct {
+                glm::mat4 mat;
+                glm::vec3 viewPos;
+            } *scene;
+            vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&scene);
+            glm::vec3 viewPos = glm::vec3(0,2,0);
+            auto view = glm::lookAt(viewPos, glm::vec3(0,0,0), glm::vec3(0,0,1));
             auto proj = glm::perspective(glm::radians(90.0f), appSize.x / (float)appSize.y, 0.1f, 100.0f);
 
-            *mat = proj * view;
+            *scene = {
+                    proj * view,
+                    viewPos,
+            };
 
         }
 
