@@ -608,9 +608,9 @@ namespace g2::gfx {
 
         assert(drawItems.size() == transforms.size());
 
-        pImpl->imageManager.runJobs();
-
-        pImpl->uploadQueue.submit(pImpl->vkDevice, pImpl->graphicsQueue);
+        pImpl->uploadQueue.jobs.push(FlushUploadJob{});
+        pImpl->uploadQueue.processJobs();
+        pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
 
         vkWaitForFences(pImpl->vkDevice, 1,
                         &pImpl->inFlightFences[pImpl->currentFrame], true,
@@ -783,21 +783,24 @@ namespace g2::gfx {
             DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
 
             uint32_t drawIndex = 0;
+            uint32_t itemIndex = 0;
             for (DrawItem &item : drawItems) {
                 Mesh mesh = pImpl->meshManager.meshes[item.mesh];
                 for (Primitive &prim : mesh.primitives) {
+
+                    pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
 
                     drawData[drawIndex] = {
                             .baseVertex = static_cast<uint32_t>(prim.baseVertex),
                             .materialId = item.material,
                     };
 
-                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),
-                                       &drawIndex);
+                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),&drawIndex);
                     vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
 
                     drawIndex++;
                 }
+                itemIndex++;
             }
         }
 

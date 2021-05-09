@@ -9,28 +9,82 @@
 #include <vector>
 #include <vk_mem_alloc.h>
 #include <span>
+#include <variant>
+#include <memory>
+#include <queue>
+#include <iostream>
+#include <condition_variable>
+#include <mutex>
 
 namespace g2::gfx {
 
+    struct UploadSource {
+        std::span<char> data;
+        std::unique_ptr<char[]> p; // Used when data is owned by source.
+        bool compressed; // Whether the data is zstd compressed or not.
+
+        size_t getUncompressedDataSize() const;
+    };
+
+    struct BufferUploadJob {
+        UploadSource source;
+        VkBuffer targetBuffer;
+        size_t offset;
+    };
+
+    struct ImageUploadJob {
+        UploadSource source;
+        VkImage targetImage;
+        VkImageLayout oldLayout;
+        VkImageLayout newLayout;
+        std::vector<VkBufferImageCopy> regions;
+    };
+
+    struct FlushUploadJob {
+    };
+
+    using UploadJob = std::variant<BufferUploadJob, ImageUploadJob, FlushUploadJob>;
+
     struct UploadQueue {
+
+        std::queue<UploadJob> jobs;
+
         // Upload queue works in upload frames. They are separate frames to graphics frames
         static const uint32_t uploadFrameCount = 4;
-        static const size_t stagingBufferSize = 10 * 1024 * 1024;
-        uint32_t currentUploadFrame;
+        static const size_t stagingBufferSize = 5 * 1024 * 1024;
 
-        VkFence fences[uploadFrameCount];
         VkCommandPool commandPool;
-        VkCommandBuffer commandBuffers[uploadFrameCount];
-        LinearBuffer stagingBuffer[uploadFrameCount];
-        void* stagingBufferMap[uploadFrameCount];
 
-        uint32_t workCount;
+        struct Frame {
+            VkFence fence;
+            VkCommandBuffer commandBuffer;
+            LinearBuffer stagingBuffer;
+            void* map;
+        };
 
-        void* queueBufferUpload(size_t numBytes, VkBuffer buffer, size_t offset);
-        void* queueImageUpload(size_t numBytes,  VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, std::span<VkBufferImageCopy> regions);
-        void submit(VkDevice device, VkQueue queue);
+        Frame frames[uploadFrameCount];
 
-        bool waiting = false;
+        std::queue<uint64_t> pendingFrames; // Frames that need submitting
+        std::queue<uint64_t> freeFrames; // Frames ready to be written to
+        bool frameInFlight[uploadFrameCount]; // wether the frame is in flight
+
+        std::mutex jobFreeQueueMutex;
+        std::condition_variable jobFreeQueueCondVar;
+
+        std::mutex pendingQueueMutex;
+
+
+        int currentFrame = -1;
+
+        //Called from client side
+        void update(VkDevice device, VkQueue queue);
+
+        void processJobs();
+
+        bool recordBufferUpload(size_t frameIndex, BufferUploadJob& job);
+        bool recordImageUpload(size_t frameIndex, ImageUploadJob& job);
+        bool recordJob(size_t frameIndex, UploadJob& job);
+
     };
 
     void createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue);

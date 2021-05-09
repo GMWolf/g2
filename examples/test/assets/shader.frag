@@ -50,7 +50,8 @@ void main() {
     pbr.albedo = texture(textures[material.albedo], uv).rgb;
     pbr.metalicity = texture(textures[material.metallicRoughness], uv).b;
     pbr.roughness = texture(textures[material.metallicRoughness], uv).g;
-    pbr.emmisivity = texture(textures[material.emmisive], uv).rgb;
+    pbr.emmisivity = vec3(0);//texture(textures[material.emmisive], uv).rgb;
+
     pbr.normal = perturb_normal(normalize(normal), viewDir, uv, texture(textures[material.normal], uv).rgb);
 
     LightFragment light;

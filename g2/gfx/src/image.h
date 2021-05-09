@@ -10,6 +10,7 @@
 #include <vk_mem_alloc.h>
 #include "upload.h"
 #include <g2/assets/asset_registry.h>
+#include <queue>
 
 namespace g2::gfx {
 
@@ -22,14 +23,6 @@ namespace g2::gfx {
 
     struct ImageAssetManager : public IAssetManager {
 
-        struct UploadJob {
-            VkImage image;
-            std::vector<VkBufferImageCopy> copyRegions;
-            std::span<const uint8_t> data;
-        };
-
-        std::vector<UploadJob> jobs;
-
         // TODO remove these members and use a queue queried from gfx instance.
         VkDevice device;
         UploadQueue* uploadQueue;
@@ -38,8 +31,6 @@ namespace g2::gfx {
         VkSampler sampler;
 
         std::vector<Image> images;
-
-        void runJobs();
 
         AssetAddResult add_asset(std::span<const char> data) override;
         const char *ext() override;

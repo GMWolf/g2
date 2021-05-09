@@ -23,22 +23,6 @@ namespace g2::gfx {
         }
     };
 
-    static bool runJob(VkDevice device, UploadQueue *uploadQueue, VmaAllocator allocator, ImageAssetManager::UploadJob& job) {
-
-
-        auto dataSize = ZSTD_getDecompressedSize(job.data.data(), job.data.size_bytes());
-        void *scratchPtr = uploadQueue->queueImageUpload(dataSize, job.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                                                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, job.copyRegions);
-
-        if (!scratchPtr) {
-            return false;
-        }
-
-        ZSTD_decompress(scratchPtr, dataSize, job.data.data(), job.data.size_bytes());
-
-        return true;
-    }
-
     AssetAddResult ImageAssetManager::add_asset(std::span<const char> data) {
         auto &image = images.emplace_back();
         uint32_t index = images.size() - 1;
@@ -129,12 +113,17 @@ namespace g2::gfx {
         vkCreateImageView(device, &viewInfo, nullptr, &image.view);
 
 
-        jobs.push_back(UploadJob {
-            .image = image.image,
-            .copyRegions = std::move(copyRegions),
-            .data = std::span(imageDef->data()->data(), imageDef->data()->size()),
+        uploadQueue->jobs.push(ImageUploadJob{
+            .source = UploadSource {
+                .data = std::span((char*)imageDef->data()->data(), imageDef->data()->size()),
+                .p = {},
+                .compressed = true,
+            },
+            .targetImage = image.image,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .regions = std::move(copyRegions),
         });
-
 
         {
             VkDescriptorImageInfo imageInfo{
@@ -166,19 +155,6 @@ namespace g2::gfx {
 
     const char* ImageAssetManager::ext() {
         return ".g2img";
-    }
-
-    void ImageAssetManager::runJobs() {
-        while(!jobs.empty()) {
-            auto& job = jobs.back();
-            if (!runJob(device, uploadQueue, allocator, job)) {
-                std::cout << "not enout space to load, breaking" << std::endl;
-                break;
-            } else {
-                std::cout << "queued " << job.data.size_bytes() << "bytes" <<std::endl;
-                jobs.pop_back();
-            }
-        }
     }
 
 }
