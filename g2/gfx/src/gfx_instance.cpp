@@ -24,6 +24,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "upload.h"
 #include "material.h"
+#include <thread>
 
 namespace g2::gfx {
 
@@ -68,6 +69,7 @@ namespace g2::gfx {
 
         MeshBuffer meshBuffer;
         UploadQueue uploadQueue;
+        std::thread uploadWorker;
 
         Buffer sceneBuffer;
         const size_t maxDrawCount = 1024 * 1024;
@@ -333,6 +335,10 @@ namespace g2::gfx {
         pImpl->descriptors = createGlobalDescriptors(pImpl->vkDevice, MAX_FRAMES_IN_FLIGHT);
 
         createUploadQueue(pImpl->vkDevice, pImpl->allocator, queueFamilyIndices.graphics.value(), &pImpl->uploadQueue);
+
+        pImpl->uploadWorker = std::thread([&](){
+            pImpl->uploadQueue.processJobs();
+        });
 
 
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
@@ -609,7 +615,6 @@ namespace g2::gfx {
         assert(drawItems.size() == transforms.size());
 
         pImpl->uploadQueue.jobs.push(FlushUploadJob{});
-        pImpl->uploadQueue.processJobs();
         pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
 
         vkWaitForFences(pImpl->vkDevice, 1,

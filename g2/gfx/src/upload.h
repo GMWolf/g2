@@ -68,8 +68,10 @@ namespace g2::gfx {
         std::queue<uint64_t> freeFrames; // Frames ready to be written to
         bool frameInFlight[uploadFrameCount]; // wether the frame is in flight
 
-        std::mutex jobFreeQueueMutex;
-        std::condition_variable jobFreeQueueCondVar;
+        std::mutex jobQueueMutex;
+        std::condition_variable jobQueueCV;
+        std::mutex freeQueueMutex;
+        std::condition_variable freeQueueCV;
 
         std::mutex pendingQueueMutex;
 
@@ -79,11 +81,13 @@ namespace g2::gfx {
         //Called from client side
         void update(VkDevice device, VkQueue queue);
 
-        void processJobs();
+        [[noreturn]] void processJobs();
 
         bool recordBufferUpload(size_t frameIndex, BufferUploadJob& job);
         bool recordImageUpload(size_t frameIndex, ImageUploadJob& job);
         bool recordJob(size_t frameIndex, UploadJob& job);
+
+        void addJob(UploadJob&& job);
 
     };
 

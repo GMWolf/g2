@@ -113,7 +113,7 @@ namespace g2::gfx {
         vkCreateImageView(device, &viewInfo, nullptr, &image.view);
 
 
-        uploadQueue->jobs.push(ImageUploadJob{
+        uploadQueue->addJob(ImageUploadJob{
             .source = UploadSource {
                 .data = std::span((char*)imageDef->data()->data(), imageDef->data()->size()),
                 .p = {},

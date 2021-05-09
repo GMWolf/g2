@@ -146,8 +146,13 @@ namespace g2::gfx {
 
     void UploadQueue::update(VkDevice device, VkQueue queue) {
 
+        std::unique_lock<std::mutex> flk(freeQueueMutex, std::defer_lock);
+        std::unique_lock<std::mutex> plk(pendingQueueMutex, std::defer_lock);
+
         //submit pending (pending => in flight)
         //TODO submit more than one
+
+        plk.lock();
         if (!pendingFrames.empty()) {
             VkSubmitInfo submitInfo{
                     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -161,6 +166,7 @@ namespace g2::gfx {
             std::cout << "submited frame " << pendingFrames.front() << std::endl;
             pendingFrames.pop();
         }
+        plk.unlock();
 
         //Check inflight frames (in flight => free)
         for(uint64_t frameIndex = 0; frameIndex < uploadFrameCount; frameIndex++) {
@@ -168,7 +174,10 @@ namespace g2::gfx {
                 if (vkGetFenceStatus(device, frames[frameIndex].fence) == VK_SUCCESS) {
                     vkResetCommandBuffer(frames[frameIndex].commandBuffer, 0);
                     frames[frameIndex].stagingBuffer.head = 0;
+                    flk.lock();
                     freeFrames.push(frameIndex);
+                    flk.unlock();
+                    freeQueueCV.notify_one();
                     frameInFlight[frameIndex] = false;
                     std::cout << "freed frame " << frameIndex << std::endl;
                 }
@@ -176,8 +185,72 @@ namespace g2::gfx {
         }
     }
 
-    void UploadQueue::processJobs() {
+    [[noreturn]] void UploadQueue::processJobs() {
 
+        std::unique_lock<std::mutex> jlk(jobQueueMutex, std::defer_lock);
+        std::unique_lock<std::mutex> flk(freeQueueMutex, std::defer_lock);
+        std::unique_lock<std::mutex> plk(pendingQueueMutex, std::defer_lock);
+
+        while(true) {
+
+            // acquire job
+            jlk.lock();
+            jobQueueCV.wait(jlk, [this]{
+                return !jobs.empty();
+            });
+
+            UploadJob job = std::move(jobs.front());
+            jobs.pop();
+            jlk.unlock();
+
+
+            //Process job
+            if (std::holds_alternative<FlushUploadJob>(job)) {
+                if (currentFrame != -1) { //If we have a frame with data in it
+                    vkEndCommandBuffer(frames[currentFrame].commandBuffer);
+                    plk.lock();
+                    pendingFrames.push(currentFrame);
+                    plk.unlock();
+                    currentFrame = -1;
+                }
+            } else {
+                bool executedJob = false;
+
+                while(executedJob == false) {
+                    //Acquire a frame
+                    if (currentFrame == -1) {
+                        flk.lock();
+                        freeQueueCV.wait(flk, [this] {
+                            return !freeFrames.empty();
+                        });
+                        currentFrame = freeFrames.front();
+                        freeFrames.pop();
+                        flk.unlock();
+
+                        VkCommandBufferBeginInfo beginInfo{
+                                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                                .pInheritanceInfo = nullptr,
+                        };
+                        vkBeginCommandBuffer(frames[currentFrame].commandBuffer, &beginInfo);
+                    }
+
+                    //execute job
+                    if (recordJob(currentFrame, job)) {
+                        executedJob = true;
+                    } else { // Not enough space in current frame. Submit and continue trying
+                        vkEndCommandBuffer(frames[currentFrame].commandBuffer);
+                        plk.lock();
+                        pendingFrames.push(currentFrame);
+                        plk.unlock();
+                        currentFrame = -1;
+                    }
+                }
+            }
+        }
+
+
+        /*
         while (!jobs.empty()) {
             auto& job = jobs.front();
 
@@ -217,6 +290,14 @@ namespace g2::gfx {
                 }
             }
         }
+         */
+    }
+
+    void UploadQueue::addJob(UploadJob&& job) {
+        std::unique_lock<std::mutex> jlk(jobQueueMutex);
+        jobs.push(std::move(job));
+        jlk.unlock();
+        jobQueueCV.notify_one();
     }
 
     void  createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue) {

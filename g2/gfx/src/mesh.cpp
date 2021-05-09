@@ -71,7 +71,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
     assert(indexAlloc.size);
     //void *indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
     //memcpy(indexScratch, indexData, indexBytes);
-    uploadQueue->jobs.push(BufferUploadJob{
+    uploadQueue->addJob(BufferUploadJob{
             .source = UploadSource{
                     .data = std::span((char *) indexData, indexBytes),
                     .p = {},
