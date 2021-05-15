@@ -40,10 +40,8 @@ namespace g2::gfx {
         std::vector<VkBufferImageCopy> regions;
     };
 
-    struct FlushUploadJob {
-    };
 
-    using UploadJob = std::variant<BufferUploadJob, ImageUploadJob, FlushUploadJob>;
+    using UploadJob = std::variant<BufferUploadJob, ImageUploadJob>;
 
     struct UploadQueue {
 

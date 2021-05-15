@@ -10,7 +10,7 @@
 
 namespace g2::gfx {
 
-    bool UploadQueue::recordBufferUpload(size_t frameIndex, BufferUploadJob& job) {
+    bool UploadQueue::recordBufferUpload(size_t frameIndex, BufferUploadJob &job) {
 
         size_t numBytes = job.source.getUncompressedDataSize();
         assert(numBytes <= stagingBufferSize);
@@ -23,12 +23,14 @@ namespace g2::gfx {
         }
 
         if (job.source.compressed) {
-            ZSTD_decompress((char*)frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size, job.source.data.data(), job.source.data.size_bytes());
+            ZSTD_decompress((char *) frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size,
+                            job.source.data.data(), job.source.data.size_bytes());
         } else {
-            memcpy((char*)frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(), job.source.data.size_bytes());
+            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(),
+                   job.source.data.size_bytes());
         }
 
-        VkBufferCopy bufferCopy {
+        VkBufferCopy bufferCopy{
                 .srcOffset = stagingAlloc.offset,
                 .dstOffset = job.offset,
                 .size = numBytes,
@@ -53,9 +55,11 @@ namespace g2::gfx {
         }
 
         if (job.source.compressed) {
-            ZSTD_decompress((char*)frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size, job.source.data.data(), job.source.data.size_bytes());
+            ZSTD_decompress((char *) frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size,
+                            job.source.data.data(), job.source.data.size_bytes());
         } else {
-            memcpy((char*)frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(), job.source.data.size_bytes());
+            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(),
+                   job.source.data.size_bytes());
         }
 
 
@@ -67,16 +71,17 @@ namespace g2::gfx {
         uint32_t maxLayer = 0;
 
         //Patch offsets and get minmax
-        for(auto& region : job.regions) {
+        for (auto &region : job.regions) {
             region.bufferOffset += stagingAlloc.offset;
 
             minMip = std::min(region.imageSubresource.mipLevel, minMip);
             maxMip = std::max(region.imageSubresource.mipLevel, maxMip);
             minLayer = std::min(region.imageSubresource.baseArrayLayer, minLayer);
-            maxLayer = std::max(region.imageSubresource.baseArrayLayer + region.imageSubresource.layerCount - 1, maxLayer);
+            maxLayer = std::max(region.imageSubresource.baseArrayLayer + region.imageSubresource.layerCount - 1,
+                                maxLayer);
         }
 
-        VkImageSubresourceRange imageRange {
+        VkImageSubresourceRange imageRange{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = minMip,
                 .levelCount = 1 + maxMip - minMip,
@@ -106,10 +111,12 @@ namespace g2::gfx {
                                  1, &imageMemoryBarrier);
         }
 
-        vkCmdCopyBufferToImage(frames[frameIndex].commandBuffer, frames[frameIndex].stagingBuffer.buffer, job.targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, job.regions.size(), job.regions.data());
+        vkCmdCopyBufferToImage(frames[frameIndex].commandBuffer, frames[frameIndex].stagingBuffer.buffer,
+                               job.targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, job.regions.size(),
+                               job.regions.data());
 
         {
-            VkImageMemoryBarrier imageMemoryBarrier {
+            VkImageMemoryBarrier imageMemoryBarrier{
                     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
                     .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
                     .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
@@ -134,8 +141,7 @@ namespace g2::gfx {
     }
 
 
-
-    bool UploadQueue::recordJob(size_t frameIndex, UploadJob& job) {
+    bool UploadQueue::recordJob(size_t frameIndex, UploadJob &job) {
         if (std::holds_alternative<BufferUploadJob>(job)) {
             return recordBufferUpload(frameIndex, std::get<BufferUploadJob>(job));
         } else if (std::holds_alternative<ImageUploadJob>(job)) {
@@ -168,7 +174,7 @@ namespace g2::gfx {
         plk.unlock();
 
         //Check inflight frames (in flight => free)
-        for(uint64_t frameIndex = 0; frameIndex < uploadFrameCount; frameIndex++) {
+        for (uint64_t frameIndex = 0; frameIndex < uploadFrameCount; frameIndex++) {
             if (frameInFlight[frameIndex]) {
                 if (vkGetFenceStatus(device, frames[frameIndex].fence) == VK_SUCCESS) {
                     flk.lock();
@@ -187,11 +193,25 @@ namespace g2::gfx {
         std::unique_lock<std::mutex> flk(freeQueueMutex, std::defer_lock);
         std::unique_lock<std::mutex> plk(pendingQueueMutex, std::defer_lock);
 
-        while(true) {
+        while (true) {
+
+
+            //Flush if jobs is empty
+            jlk.lock();
+            if (currentFrame != -1) {
+                if (jobs.empty()) {
+                    jlk.unlock();
+                    vkEndCommandBuffer(frames[currentFrame].commandBuffer);
+                    plk.lock();
+                    pendingFrames.push(currentFrame);
+                    plk.unlock();
+                    currentFrame = -1;
+                    jlk.lock();
+                }
+            }
 
             // acquire job
-            jlk.lock();
-            jobQueueCV.wait(jlk, [this]{
+            jobQueueCV.wait(jlk, [this] {
                 return !jobs.empty();
             });
 
@@ -200,62 +220,50 @@ namespace g2::gfx {
             jlk.unlock();
 
 
-
             //Process job
-            if (std::holds_alternative<FlushUploadJob>(job)) {
-                if (currentFrame != -1) { //If we have a frame with data in it
+            bool executedJob = false;
+            while (executedJob == false) {
+                //Acquire a frame
+                if (currentFrame == -1) {
+                    flk.lock();
+                    freeQueueCV.wait(flk, [this] {
+                        return !freeFrames.empty();
+                    });
+                    currentFrame = freeFrames.front();
+                    freeFrames.pop();
+                    flk.unlock();
+                    vkResetCommandBuffer(frames[currentFrame].commandBuffer, 0);
+                    frames[currentFrame].stagingBuffer.head = 0;
+                    VkCommandBufferBeginInfo beginInfo{
+                            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                            .pInheritanceInfo = nullptr,
+                    };
+                    vkBeginCommandBuffer(frames[currentFrame].commandBuffer, &beginInfo);
+                }
+
+                //execute job
+                if (recordJob(currentFrame, job)) {
+                    executedJob = true;
+                } else { // Not enough space in current frame. Submit and continue trying
                     vkEndCommandBuffer(frames[currentFrame].commandBuffer);
                     plk.lock();
                     pendingFrames.push(currentFrame);
                     plk.unlock();
                     currentFrame = -1;
                 }
-            } else {
-                bool executedJob = false;
-
-                while(executedJob == false) {
-                    //Acquire a frame
-                    if (currentFrame == -1) {
-                        flk.lock();
-                        freeQueueCV.wait(flk, [this] {
-                            return !freeFrames.empty();
-                        });
-                        currentFrame = freeFrames.front();
-                        freeFrames.pop();
-                        flk.unlock();
-                        vkResetCommandBuffer(frames[currentFrame].commandBuffer, 0);
-                        frames[currentFrame].stagingBuffer.head = 0;
-                        VkCommandBufferBeginInfo beginInfo {
-                                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-                                .pInheritanceInfo = nullptr,
-                        };
-                        vkBeginCommandBuffer(frames[currentFrame].commandBuffer, &beginInfo);
-                    }
-
-                    //execute job
-                    if (recordJob(currentFrame, job)) {
-                        executedJob = true;
-                    } else { // Not enough space in current frame. Submit and continue trying
-                        vkEndCommandBuffer(frames[currentFrame].commandBuffer);
-                        plk.lock();
-                        pendingFrames.push(currentFrame);
-                        plk.unlock();
-                        currentFrame = -1;
-                    }
-                }
             }
         }
     }
 
-    void UploadQueue::addJob(UploadJob&& job) {
+    void UploadQueue::addJob(UploadJob &&job) {
         std::unique_lock<std::mutex> jlk(jobQueueMutex);
         jobs.push(std::move(job));
         jlk.unlock();
         jobQueueCV.notify_one();
     }
 
-    void  createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue) {
+    void createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue *uploadQueue) {
 
         VkBufferCreateInfo scratchBufferInfo{
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -286,7 +294,8 @@ namespace g2::gfx {
                 .flags = VK_FENCE_CREATE_SIGNALED_BIT};
 
         for (int i = 0; i < UploadQueue::uploadFrameCount; i++) {
-            createLinearBuffer(allocator, &scratchBufferInfo, &scratchAllocationInfo, &uploadQueue->frames[i].stagingBuffer);
+            createLinearBuffer(allocator, &scratchBufferInfo, &scratchAllocationInfo,
+                               &uploadQueue->frames[i].stagingBuffer);
             vmaMapMemory(allocator, uploadQueue->frames[i].stagingBuffer.allocation, &uploadQueue->frames[i].map);
             vkAllocateCommandBuffers(device, &commandBufferInfo, &uploadQueue->frames[i].commandBuffer);
             vkCreateFence(device, &fenceInfo, nullptr, &uploadQueue->frames[i].fence);
@@ -298,7 +307,7 @@ namespace g2::gfx {
     size_t UploadSource::getUncompressedDataSize() const {
         if (compressed) {
             return ZSTD_getDecompressedSize(data.data(), data.size_bytes());
-        }else{
+        } else {
             return data.size_bytes();
         }
     }

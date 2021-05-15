@@ -614,7 +614,6 @@ namespace g2::gfx {
 
         assert(drawItems.size() == transforms.size());
 
-        pImpl->uploadQueue.jobs.push(FlushUploadJob{});
         pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
 
         vkWaitForFences(pImpl->vkDevice, 1,
