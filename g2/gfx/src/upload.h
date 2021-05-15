@@ -20,32 +20,37 @@ namespace g2::gfx {
 
     struct UploadSource {
         std::span<char> data;
-        std::unique_ptr<char[]> p; // Used when data is owned by source.
         bool compressed; // Whether the data is zstd compressed or not.
 
         size_t getUncompressedDataSize() const;
     };
 
-    struct BufferUploadJob {
-        UploadSource source;
+    struct BufferUploadTarget {
         VkBuffer targetBuffer;
         size_t offset;
     };
 
-    struct ImageUploadJob {
-        UploadSource source;
+    struct ImageUploadTarget {
         VkImage targetImage;
         VkImageLayout oldLayout;
         VkImageLayout newLayout;
         std::vector<VkBufferImageCopy> regions;
     };
 
+    struct UploadJob {
+        uint32_t priority;
+        UploadSource source;
+        std::variant<BufferUploadTarget, ImageUploadTarget> target;
+    };
 
-    using UploadJob = std::variant<BufferUploadJob, ImageUploadJob>;
+    struct UploadJobPriorityComparator {
+        inline bool operator()(const UploadJob& lhs, const UploadJob& rhs) {
+            return lhs.priority < rhs.priority;
+        }
+    };
 
     struct UploadQueue {
-
-        std::queue<UploadJob> jobs;
+        std::priority_queue<UploadJob, std::vector<UploadJob>, UploadJobPriorityComparator> jobs;
 
         // Upload queue works in upload frames. They are separate frames to graphics frames
         static const uint32_t uploadFrameCount = 4;
@@ -81,8 +86,8 @@ namespace g2::gfx {
 
         [[noreturn]] void processJobs();
 
-        bool recordBufferUpload(size_t frameIndex, BufferUploadJob& job);
-        bool recordImageUpload(size_t frameIndex, ImageUploadJob& job);
+        bool recordBufferUpload(size_t frameIndex, const UploadSource& source, BufferUploadTarget& target);
+        bool recordImageUpload(size_t frameIndex, const UploadSource& source, ImageUploadTarget& target);
         bool recordJob(size_t frameIndex, UploadJob& job);
 
         void addJob(UploadJob&& job);

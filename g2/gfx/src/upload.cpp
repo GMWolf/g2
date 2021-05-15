@@ -10,9 +10,9 @@
 
 namespace g2::gfx {
 
-    bool UploadQueue::recordBufferUpload(size_t frameIndex, BufferUploadJob &job) {
+    bool UploadQueue::recordBufferUpload(size_t frameIndex, const UploadSource& source, BufferUploadTarget& target) {
 
-        size_t numBytes = job.source.getUncompressedDataSize();
+        size_t numBytes = source.getUncompressedDataSize();
         assert(numBytes <= stagingBufferSize);
 
 
@@ -22,31 +22,31 @@ namespace g2::gfx {
             return false;
         }
 
-        if (job.source.compressed) {
+        if (source.compressed) {
             ZSTD_decompress((char *) frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size,
-                            job.source.data.data(), job.source.data.size_bytes());
+                            source.data.data(), source.data.size_bytes());
         } else {
-            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(),
-                   job.source.data.size_bytes());
+            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, source.data.data(),
+                   source.data.size_bytes());
         }
 
         VkBufferCopy bufferCopy{
                 .srcOffset = stagingAlloc.offset,
-                .dstOffset = job.offset,
+                .dstOffset = target.offset,
                 .size = numBytes,
         };
 
-        vkCmdCopyBuffer(frames[frameIndex].commandBuffer, frames[frameIndex].stagingBuffer.buffer, job.targetBuffer, 1,
+        vkCmdCopyBuffer(frames[frameIndex].commandBuffer, frames[frameIndex].stagingBuffer.buffer, target.targetBuffer, 1,
                         &bufferCopy);
 
         return true;
     }
 
-    bool UploadQueue::recordImageUpload(size_t frameIndex, ImageUploadJob &job) {
+    bool UploadQueue::recordImageUpload(size_t frameIndex, const UploadSource& source, ImageUploadTarget& target) {
 
         assert(frameIndex != -1);
 
-        size_t numBytes = job.source.getUncompressedDataSize();
+        size_t numBytes = source.getUncompressedDataSize();
         assert(numBytes <= stagingBufferSize);
 
         auto stagingAlloc = allocateFromLinearBuffer(&frames[frameIndex].stagingBuffer, numBytes, 16);
@@ -54,12 +54,12 @@ namespace g2::gfx {
             return false;
         }
 
-        if (job.source.compressed) {
+        if (source.compressed) {
             ZSTD_decompress((char *) frames[frameIndex].map + stagingAlloc.offset, stagingAlloc.size,
-                            job.source.data.data(), job.source.data.size_bytes());
+                            source.data.data(), source.data.size_bytes());
         } else {
-            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, job.source.data.data(),
-                   job.source.data.size_bytes());
+            memcpy((char *) frames[frameIndex].map + stagingAlloc.offset, source.data.data(),
+                   source.data.size_bytes());
         }
 
 
@@ -71,7 +71,7 @@ namespace g2::gfx {
         uint32_t maxLayer = 0;
 
         //Patch offsets and get minmax
-        for (auto &region : job.regions) {
+        for (auto &region : target.regions) {
             region.bufferOffset += stagingAlloc.offset;
 
             minMip = std::min(region.imageSubresource.mipLevel, minMip);
@@ -94,11 +94,11 @@ namespace g2::gfx {
                     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
                     .srcAccessMask = 0,
                     .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-                    .oldLayout = job.oldLayout,
+                    .oldLayout = target.oldLayout,
                     .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                    .image = job.targetImage,
+                    .image = target.targetImage,
                     .subresourceRange = imageRange,
             };
 
@@ -112,8 +112,8 @@ namespace g2::gfx {
         }
 
         vkCmdCopyBufferToImage(frames[frameIndex].commandBuffer, frames[frameIndex].stagingBuffer.buffer,
-                               job.targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, job.regions.size(),
-                               job.regions.data());
+                               target.targetImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target.regions.size(),
+                               target.regions.data());
 
         {
             VkImageMemoryBarrier imageMemoryBarrier{
@@ -121,10 +121,10 @@ namespace g2::gfx {
                     .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
                     .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
                     .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    .newLayout = job.newLayout,
+                    .newLayout = target.newLayout,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                    .image = job.targetImage,
+                    .image = target.targetImage,
                     .subresourceRange = imageRange,
             };
 
@@ -142,10 +142,10 @@ namespace g2::gfx {
 
 
     bool UploadQueue::recordJob(size_t frameIndex, UploadJob &job) {
-        if (std::holds_alternative<BufferUploadJob>(job)) {
-            return recordBufferUpload(frameIndex, std::get<BufferUploadJob>(job));
-        } else if (std::holds_alternative<ImageUploadJob>(job)) {
-            return recordImageUpload(frameIndex, std::get<ImageUploadJob>(job));
+        if (std::holds_alternative<BufferUploadTarget>(job.target)) {
+            return recordBufferUpload(frameIndex, job.source, std::get<BufferUploadTarget>(job.target));
+        } else if (std::holds_alternative<ImageUploadTarget>(job.target)) {
+            return recordImageUpload(frameIndex, job.source, std::get<ImageUploadTarget>(job.target));
         }
         return false;
     }
@@ -215,7 +215,7 @@ namespace g2::gfx {
                 return !jobs.empty();
             });
 
-            UploadJob job = std::move(jobs.front());
+            UploadJob job = std::move(jobs.top());
             jobs.pop();
             jlk.unlock();
 

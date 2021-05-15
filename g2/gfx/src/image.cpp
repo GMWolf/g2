@@ -84,19 +84,20 @@ namespace g2::gfx {
 
                 auto source = UploadSource {
                         .data = std::span((char*)mipData->data()->data(), mipData->data()->size()),
-                        .p = {},
                         .compressed = true,
                 };
 
                 assert(source.getUncompressedDataSize());
 
-
-                uploadQueue->addJob(ImageUploadJob {
-                        .source = std::move(source),
-                        .targetImage = image.image,
-                        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        .regions = std::move(copyRegions),
+                uploadQueue->addJob(UploadJob {
+                        .priority = static_cast<uint32_t>(level),
+                        .source = source,
+                        .target = ImageUploadTarget {
+                            .targetImage = image.image,
+                            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                            .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                            .regions = std::move(copyRegions),
+                        }
                 });
 
             }

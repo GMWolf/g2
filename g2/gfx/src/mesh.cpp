@@ -56,14 +56,16 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
     //void* vertexScratch = uploadQueue->queueBufferUpload(vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset);
     //memcpy(vertexScratch, vertexData, vertexBytes);
 
-    uploadQueue->jobs.push(BufferUploadJob{
+    uploadQueue->jobs.push({
+        .priority = UINT16_MAX,
         .source = UploadSource{
             .data = std::span((char *) vertexData, vertexBytes),
-            .p = {},
             .compressed = false,
         },
-        .targetBuffer = meshBuffer->vertexBuffer.buffer,
-        .offset = vertexAlloc.offset
+        .target = BufferUploadTarget {
+            .targetBuffer = meshBuffer->vertexBuffer.buffer,
+            .offset = vertexAlloc.offset
+        },
     });
 
 
@@ -71,14 +73,16 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
     assert(indexAlloc.size);
     //void *indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
     //memcpy(indexScratch, indexData, indexBytes);
-    uploadQueue->addJob(BufferUploadJob{
+    uploadQueue->addJob(UploadJob{
+            .priority = UINT16_MAX,
             .source = UploadSource{
                     .data = std::span((char *) indexData, indexBytes),
-                    .p = {},
                     .compressed = false,
             },
-            .targetBuffer = meshBuffer->indexBuffer.buffer,
-            .offset = indexAlloc.offset
+            .target = BufferUploadTarget {
+                .targetBuffer = meshBuffer->indexBuffer.buffer,
+                .offset = indexAlloc.offset
+            },
     });
 
     assert((vertexAlloc.offset / meshFormat->vertexByteSize) * meshFormat->vertexByteSize == vertexAlloc.offset);
