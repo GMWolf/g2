@@ -41,7 +41,7 @@ void g2::gfx::initMeshBuffer(VmaAllocator allocator,
 }
 
 
-g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *meshBuffer,
+g2::gfx::Primitive g2::gfx::addMeshPrimitive(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *meshBuffer,
                                g2::gfx::MeshFormat *meshFormat, void *vertexData,
                                size_t vertexCount, void *indexData, size_t indexCount) {
 
@@ -53,8 +53,6 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
 
     auto vertexAlloc = allocateFromLinearBuffer(&meshBuffer->vertexBuffer, vertexBytes, meshFormat->vertexByteSize);
     assert(vertexAlloc.size);
-    //void* vertexScratch = uploadQueue->queueBufferUpload(vertexBytes, meshBuffer->vertexBuffer.buffer, vertexAlloc.offset);
-    //memcpy(vertexScratch, vertexData, vertexBytes);
 
     uploadQueue->jobs.push({
         .priority = UINT16_MAX,
@@ -71,8 +69,6 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
 
     auto indexAlloc = allocateFromLinearBuffer(&meshBuffer->indexBuffer, indexBytes, indexByteSize);
     assert(indexAlloc.size);
-    //void *indexScratch = uploadQueue->queueBufferUpload(indexBytes, meshBuffer->indexBuffer.buffer, indexAlloc.offset);
-    //memcpy(indexScratch, indexData, indexBytes);
     uploadQueue->addJob(UploadJob{
             .priority = UINT16_MAX,
             .source = UploadSource{
@@ -95,10 +91,7 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *me
             .indexCount = indexCount,
     };
 
-    return Mesh{
-            {prim}
-    };
-
+    return prim;
 }
 
 g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, MeshBuffer *meshBuffer, const g2::gfx::MeshData *meshData) {
@@ -112,10 +105,9 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, MeshBuffer *meshBuffer,
         };
 
         //Todo actually append primitives
-        return addMesh(uploadQueue, meshBuffer, &format, (void *) primitive->vertexData()->data(),
-                       primitive->vertexCount(), (void *) primitive->indices()->data(), primitive->indices()->size());
+        mesh.primitives.push_back(addMeshPrimitive(uploadQueue, meshBuffer, &format, (void *) primitive->vertexData()->data(),
+                       primitive->vertexCount(), (void *) primitive->indices()->data(), primitive->indices()->size()));
     }
-
 
     return mesh;
 }
