@@ -35,6 +35,10 @@ namespace g2::gfx {
         uint32_t materialId;
     };
 
+    struct UScene{
+        glm::mat4 mat;
+        glm::vec3 viewPos;
+    };
 
     struct Instance::Impl {
         VkInstance vkInstance;
@@ -71,7 +75,8 @@ namespace g2::gfx {
         UploadQueue uploadQueue;
         std::thread uploadWorker;
 
-        Buffer sceneBuffer;
+        Buffer sceneBuffer[MAX_FRAMES_IN_FLIGHT];
+        UScene* sceneBufferMap[MAX_FRAMES_IN_FLIGHT];
         const size_t maxDrawCount = 1024 * 1024;
         Buffer drawDataBuffer[MAX_FRAMES_IN_FLIGHT];
         DrawData* drawDataMap[MAX_FRAMES_IN_FLIGHT];
@@ -344,11 +349,6 @@ namespace g2::gfx {
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
         {
-            struct UScene{
-                glm::mat4 mat;
-                glm::vec3 viewPos;
-            } *scene;
-
             VkBufferCreateInfo bufferCreateInfo {
                     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                     .size = sizeof(UScene),
@@ -361,17 +361,11 @@ namespace g2::gfx {
             };
 
 
-            createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer);
+            for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                createBuffer(pImpl->allocator, &bufferCreateInfo, &bufferAllocInfo, &pImpl->sceneBuffer[i]);
 
-            vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer.allocation, (void**)&scene);
-            glm::vec3 viewPos = glm::vec3(0,2,0);
-            auto view = glm::lookAt(viewPos, glm::vec3(0,0,0), glm::vec3(0,0,1));
-            auto proj = glm::perspective(glm::radians(90.0f), appSize.x / (float)appSize.y, 0.1f, 100.0f);
-
-            *scene = {
-                    proj * view,
-                    viewPos,
-            };
+                vmaMapMemory(pImpl->allocator, pImpl->sceneBuffer[i].allocation, (void **) &pImpl->sceneBufferMap[i]);
+            }
 
         }
 
@@ -517,9 +511,9 @@ namespace g2::gfx {
             std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT * 3);
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
                 VkDescriptorBufferInfo sceneBufferInfo {
-                        .buffer = pImpl->sceneBuffer.buffer,
+                        .buffer = pImpl->sceneBuffer[i].buffer,
                         .offset = 0,
-                        .range = pImpl->sceneBuffer.size,
+                        .range = pImpl->sceneBuffer[i].size,
                 };
 
                 sceneDescriptorWrites[i * 3] = {
@@ -610,9 +604,17 @@ namespace g2::gfx {
     }
 
 
-    void Instance::draw(std::span<DrawItem> drawItems,  std::span<Transform> transforms) {
+    void Instance::draw(std::span<DrawItem> drawItems,  std::span<Transform> transforms, Transform camera) {
 
         assert(drawItems.size() == transforms.size());
+
+        auto view = camera.inverse().matrix();
+        auto proj = glm::perspective(glm::radians(90.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, 100.0f);
+
+        *pImpl->sceneBufferMap[pImpl->currentFrame] = {
+                proj * view,
+                camera.pos,
+        };
 
         pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
 

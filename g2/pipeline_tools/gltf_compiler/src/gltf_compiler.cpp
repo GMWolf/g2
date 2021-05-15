@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
 
     for(auto mat : std::span(data->materials, data->materials_count)) {
         auto matData = compileMaterial(&mat);
-        auto matPath = fs::path(mat.name).concat(".g2mat");
 
+        auto matPath = fs::path(mat.name).concat(".g2mat");
 
         archiveWriter.addEntry(matPath.c_str(), matData);
     }

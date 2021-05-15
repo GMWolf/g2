@@ -16,15 +16,26 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<const char
 
     auto& mat = materials[index];
 
-    std::vector<AssetReferencePatch> patches {
-            {.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,},
-            {.name = matDef->normal()->c_str(), .index = &mat.normalImage,},
-            {.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,},
-            {.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,},
-    };
+    std::vector<AssetReferencePatch> patches;
+
+    if (matDef->albedo()) {
+        patches.push_back({.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,});
+    }
+
+    if (matDef->normal()) {
+        patches.push_back({.name = matDef->normal()->c_str(), .index = &mat.normalImage,});
+    }
+
+    if (matDef->metallicRoughness()) {
+        patches.push_back({.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,});
+    }
 
     if (matDef->emissive()) {
         patches.push_back({.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,});
+    }
+
+    if (matDef->occlusion()) {
+        patches.push_back({.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,});
     }
 
     return AssetAddResult {

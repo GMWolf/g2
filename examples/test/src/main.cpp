@@ -55,6 +55,11 @@ int main() {
 
     float r = 0;
 
+    g2::gfx::Transform camera{};
+    camera.pos = {0, 2, 0};
+    camera.scale = 1;
+    camera.orientation = glm::quatLookAt(glm::vec3(0, -1, 0), glm::vec3(0,0,1));
+
     while (!app.shouldClose()) {
         app.pollEvents();
         gfx.setFramebufferExtent(app.getWindowSize());
@@ -73,7 +78,7 @@ int main() {
                 }
         };
 
-        gfx.draw(drawItems, transforms);
+        gfx.draw(drawItems, transforms, camera);
 
         r += 0.0001;
     }
