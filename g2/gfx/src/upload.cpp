@@ -163,7 +163,6 @@ namespace g2::gfx {
             vkResetFences(device, 1, &frames[pendingFrames.front()].fence);
             vkQueueSubmit(queue, 1, &submitInfo, frames[pendingFrames.front()].fence);
             frameInFlight[pendingFrames.front()] = true;
-            std::cout << "submited frame " << pendingFrames.front() << std::endl;
             pendingFrames.pop();
         }
         plk.unlock();
@@ -172,14 +171,11 @@ namespace g2::gfx {
         for(uint64_t frameIndex = 0; frameIndex < uploadFrameCount; frameIndex++) {
             if (frameInFlight[frameIndex]) {
                 if (vkGetFenceStatus(device, frames[frameIndex].fence) == VK_SUCCESS) {
-                    vkResetCommandBuffer(frames[frameIndex].commandBuffer, 0);
-                    frames[frameIndex].stagingBuffer.head = 0;
                     flk.lock();
                     freeFrames.push(frameIndex);
                     flk.unlock();
                     freeQueueCV.notify_one();
                     frameInFlight[frameIndex] = false;
-                    std::cout << "freed frame " << frameIndex << std::endl;
                 }
             }
         }
@@ -204,6 +200,7 @@ namespace g2::gfx {
             jlk.unlock();
 
 
+
             //Process job
             if (std::holds_alternative<FlushUploadJob>(job)) {
                 if (currentFrame != -1) { //If we have a frame with data in it
@@ -226,8 +223,9 @@ namespace g2::gfx {
                         currentFrame = freeFrames.front();
                         freeFrames.pop();
                         flk.unlock();
-
-                        VkCommandBufferBeginInfo beginInfo{
+                        vkResetCommandBuffer(frames[currentFrame].commandBuffer, 0);
+                        frames[currentFrame].stagingBuffer.head = 0;
+                        VkCommandBufferBeginInfo beginInfo {
                                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
                                 .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
                                 .pInheritanceInfo = nullptr,
@@ -248,49 +246,6 @@ namespace g2::gfx {
                 }
             }
         }
-
-
-        /*
-        while (!jobs.empty()) {
-            auto& job = jobs.front();
-
-            if (std::holds_alternative<FlushUploadJob>(job)){
-                if (currentFrame != -1) {
-                    vkEndCommandBuffer(frames[currentFrame].commandBuffer);
-                    pendingFrames.push(currentFrame);
-                    std::cout << "flush pushed pending frame " << currentFrame << std::endl;
-                    currentFrame = -1;
-                }
-                jobs.pop();
-            } else {
-                //acquire frame
-                if (currentFrame == -1) {
-                    if (freeFrames.empty()) {
-                        return;
-                    }
-                    currentFrame = (int) freeFrames.front();
-                    freeFrames.pop();
-
-                    VkCommandBufferBeginInfo beginInfo{
-                            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-                            .pInheritanceInfo = nullptr,
-                    };
-                    vkBeginCommandBuffer(frames[currentFrame].commandBuffer, &beginInfo);
-                }
-
-                // submit job
-                if (recordJob(currentFrame, job)) {
-                    jobs.pop();
-                } else { // Not enough space in current frame. Submit and continue trying
-                    vkEndCommandBuffer(frames[currentFrame].commandBuffer);
-                    pendingFrames.push(currentFrame);
-                    std::cout << "pushed pending frame " << currentFrame << std::endl;
-                    currentFrame = -1;
-                }
-            }
-        }
-         */
     }
 
     void UploadQueue::addJob(UploadJob&& job) {

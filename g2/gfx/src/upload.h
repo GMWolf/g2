@@ -51,7 +51,7 @@ namespace g2::gfx {
 
         // Upload queue works in upload frames. They are separate frames to graphics frames
         static const uint32_t uploadFrameCount = 4;
-        static const size_t stagingBufferSize = 5 * 1024 * 1024;
+        static const size_t stagingBufferSize = 10 * 1024 * 1024;
 
         VkCommandPool commandPool;
 

@@ -54,19 +54,15 @@ namespace g2::gfx {
 
         vmaCreateImage(allocator, &imageCreateInfo, &allocInfo, &image.image, &image.allocation, nullptr);
 
-        std::vector<VkBufferImageCopy> copyRegions;
-        copyRegions.reserve(imageDef->levels());
-
         {
-            uint64_t offset = 0;
             uint64_t width = imageDef->width();
             uint64_t height = imageDef->height();
             uint64_t depth = imageDef->depth();
             for (int level = 0; level < imageDef->levels(); level++) {
-
+                std::vector<VkBufferImageCopy> copyRegions;
                 auto &region = copyRegions.emplace_back();
-                region.bufferOffset = offset;
-                offset += width * height; //TODO take format into account
+
+                region.bufferOffset = 0;
                 region.bufferRowLength = 0;
                 region.bufferImageHeight = 0;
                 region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -80,9 +76,29 @@ namespace g2::gfx {
                 region.imageExtent.height = height;
                 region.imageExtent.depth = depth;
 
-                width /= 2;
-                height /= 2;
-                depth /= 2;
+                width = std::max<uint64_t>(1u, width / 2);
+                height = std::max<uint64_t>(1u, height / 2);
+                depth = std::max<uint64_t>(1u, depth / 2);
+
+                auto mipData = imageDef->mips()->Get(level);
+
+                auto source = UploadSource {
+                        .data = std::span((char*)mipData->data()->data(), mipData->data()->size()),
+                        .p = {},
+                        .compressed = true,
+                };
+
+                assert(source.getUncompressedDataSize());
+
+
+                uploadQueue->addJob(ImageUploadJob {
+                        .source = std::move(source),
+                        .targetImage = image.image,
+                        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .regions = std::move(copyRegions),
+                });
+
             }
         }
 
@@ -111,19 +127,6 @@ namespace g2::gfx {
 
 
         vkCreateImageView(device, &viewInfo, nullptr, &image.view);
-
-
-        uploadQueue->addJob(ImageUploadJob{
-            .source = UploadSource {
-                .data = std::span((char*)imageDef->data()->data(), imageDef->data()->size()),
-                .p = {},
-                .compressed = true,
-            },
-            .targetImage = image.image,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .regions = std::move(copyRegions),
-        });
 
         {
             VkDescriptorImageInfo imageInfo{

@@ -3,13 +3,17 @@ file_extension "g2img";
 
 namespace g2.gfx;
 
+table ImageMip {
+    data: [ubyte];
+}
+
 table ImageDef {
     width: ushort;
     height: ushort;
     depth: ushort;
     levels: ubyte;
     format: Format;
-    data: [ubyte];
+    mips: [ImageMip];
 }
 
 

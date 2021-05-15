@@ -67,7 +67,6 @@ static int alignTo(int x, int n) {
 g2::gfx::BufferRegion g2::gfx::allocateFromLinearBuffer(
     g2::gfx::LinearBuffer *linearBuffer, size_t size, size_t align) {
 
-
   const uintptr_t aligned = alignTo(linearBuffer->head, align);
 
   if(aligned + size > linearBuffer->size) {
