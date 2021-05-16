@@ -44,6 +44,7 @@ int main() {
 
     auto mesh2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh");
 
+
     g2::gfx::DrawItem drawItems[]{
         {.mesh = mesh},
         {.mesh = mesh2},
@@ -90,17 +91,16 @@ int main() {
             camera.pos += camera.orientation * glm::vec3(0, 1, 0) * dt * movSpd;
         }
 
-
         g2::gfx::Transform transforms[]{
                 {
-                        .pos = {1, 0, 0},
+                        .pos = {1, 1, -2},
                         .scale = 1.0f,
-                        .orientation = glm::quat(glm::vec3(0, 0, r)),
+                        .orientation = glm::quat(glm::vec3(0, r, 0)),
                 },
                 {
-                        .pos = {-1, 0, 0},
-                        .scale = 0.8f,
-                        .orientation = glm::quat(),
+                        .pos = {1, 0, 2},
+                        .scale = 2.0f,
+                        .orientation = glm::quat(glm::vec3(0, 0, 0)),
                 },
                 {
                     .pos = {0,0,0},

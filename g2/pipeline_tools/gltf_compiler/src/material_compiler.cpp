@@ -15,7 +15,12 @@ std::vector<uint8_t> compileMaterial(const cgltf_material *mat) {
     fb::FlatBufferBuilder fbb(1024);
 
 
-    auto albedoUri = (fs::path("..") / mat->pbr_metallic_roughness.base_color_texture.texture->image->uri).concat(".g2img");
+    fs::path albedoUri;
+    const char* c_albedoUri = nullptr;
+    if(mat->pbr_metallic_roughness.base_color_texture.texture) {
+        albedoUri = (fs::path("..") / mat->pbr_metallic_roughness.base_color_texture.texture->image->uri).concat(".g2img");
+        c_albedoUri = albedoUri.c_str();
+    }
 
     fs::path metallicRoughnessUri;
     const char* c_metallicRoughnessUri = nullptr;
@@ -46,7 +51,7 @@ std::vector<uint8_t> compileMaterial(const cgltf_material *mat) {
         c_emissiveUri = emissiveUri.c_str();
     }
 
-    auto m = g2::gfx::CreateMaterialDefDirect(fbb, mat->name, albedoUri.c_str(),
+    auto m = g2::gfx::CreateMaterialDefDirect(fbb, mat->name, c_albedoUri,
                                                          c_metallicRoughnessUri,
                                                          c_normalUri,
                                                          c_occlusionUri,

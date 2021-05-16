@@ -341,11 +341,6 @@ namespace g2::gfx {
 
         createUploadQueue(pImpl->vkDevice, pImpl->allocator, queueFamilyIndices.graphics.value(), &pImpl->uploadQueue);
 
-        pImpl->uploadWorker = std::thread([&](){
-            pImpl->uploadQueue.processJobs();
-        });
-
-
         initMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
 
         {
@@ -436,6 +431,8 @@ namespace g2::gfx {
             .mipLodBias = 0.0f,
             .anisotropyEnable = VK_FALSE, // TODO enable anisotropy
             .maxAnisotropy = 8, // TODO query max anisotropy
+            .minLod = 0,
+            .maxLod = VK_LOD_CLAMP_NONE,
         };
 
         vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &pImpl->sampler);
@@ -568,6 +565,11 @@ namespace g2::gfx {
             vkUpdateDescriptorSets(pImpl->vkDevice, sceneDescriptorWrites.size(), sceneDescriptorWrites.data(), 0, nullptr);
 
         }
+
+
+        pImpl->uploadWorker = std::thread([&](){
+            pImpl->uploadQueue.processJobs();
+        });
     }
 
     Instance::~Instance() {

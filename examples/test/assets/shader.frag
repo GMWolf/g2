@@ -57,7 +57,7 @@ void main() {
 
     MaterialData material = materials[d.materialIndex];
 
-    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(1,0,1,1));
+    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(0.1,0.05,0.07,1));
 
     if(albedoAlpha.a < 0.05) {
         discard;

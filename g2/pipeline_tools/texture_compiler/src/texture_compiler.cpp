@@ -106,10 +106,10 @@ int main(int argc, char* argv[]) {
         mips.push_back(g2::gfx::CreateImageMipDirect(fbb, &compressedData));
 
         stbir_resize_uint8_srgb(imageData, mipWidth, mipHeight, 0,
-                                outImageData,std::max(1u, mipWidth / 2u), std::max(1u, mipHeight / 2u), 0,
+                                outImageData,std::max(4u, mipWidth / 2u), std::max(4u, mipHeight / 2u), 0,
                                 4, 3, 0);
-        mipWidth = std::max(1u, mipWidth / 2u);
-        mipHeight = std::max(1u, mipHeight / 2u);
+        mipWidth = std::max(4u, mipWidth / 2u); //we want minimum 4x4 blocks
+        mipHeight = std::max(4u, mipHeight / 2u);
 
         std::swap(imageData, outImageData);
     }
