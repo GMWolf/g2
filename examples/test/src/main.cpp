@@ -51,6 +51,8 @@ int main() {
     g2::gfx::DrawItem drawItems[]{
         {.mesh = mesh, .material = material},
         {.mesh = mesh2, .material = material2},
+        {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh"),
+         .material = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/material0.g2mat")},
     };
 
     float r = 0;
@@ -75,6 +77,11 @@ int main() {
                         .pos = {-1, 0, 0},
                         .scale = 0.8f,
                         .orientation = glm::quat(),
+                },
+                {
+                    .pos = {0,0,0},
+                    .scale = 1.0f,
+                    .orientation = glm::quat(),
                 }
         };
 

@@ -2,6 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : require
 
+#define UINT32_MAX    (4294967295U)
+#define INVALID_IMAGE UINT32_MAX
+
 #include "pbr.glsl"
 #include "normals.glsl"
 
@@ -40,6 +43,14 @@ layout( push_constant ) uniform PusConstant {
 
 layout(location = 0) out vec4 outColor;
 
+vec4 sampleImage(uint imageIndex, vec2 uv, vec4 def) {
+    if (imageIndex == INVALID_IMAGE) {
+        return def;
+    } else {
+        return texture(textures[imageIndex], uv);
+    }
+}
+
 void main() {
 
     DrawData d = drawData[drawIndex];
@@ -47,12 +58,15 @@ void main() {
     MaterialData material = materials[d.materialIndex];
 
     PBRFragment pbr;
-    pbr.albedo = texture(textures[material.albedo], uv).rgb;
-    pbr.metalicity = texture(textures[material.metallicRoughness], uv).b;
-    pbr.roughness = texture(textures[material.metallicRoughness], uv).g;
-    pbr.emmisivity = vec3(0);//texture(textures[material.emmisive], uv).rgb;
+    pbr.albedo = sampleImage(material.albedo, uv, vec4(1,0,1,1)).rgb;
+    pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(0)).b;
+    pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(0.8)).g;
+    pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(0)).rgb;
 
-    pbr.normal = perturb_normal(normalize(normal), viewDir, uv, texture(textures[material.normal], uv).rgb);
+    pbr.normal = normalize(normal);
+    if (material.normal != INVALID_IMAGE) {
+        pbr.normal = perturb_normal(pbr.normal, viewDir, uv, texture(textures[material.normal], uv).rgb);
+    }
 
     LightFragment light;
     light.lightDirection = -normalize(vec3(0.75, -1, 0));

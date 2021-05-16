@@ -20,22 +20,32 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<const char
 
     if (matDef->albedo()) {
         patches.push_back({.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,});
+    } else {
+        mat.albedoImage = UINT32_MAX;
     }
 
     if (matDef->normal()) {
         patches.push_back({.name = matDef->normal()->c_str(), .index = &mat.normalImage,});
+    } else {
+        mat.normalImage = UINT32_MAX;
     }
 
     if (matDef->metallicRoughness()) {
         patches.push_back({.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,});
+    } else {
+        mat.metallicRoughnessImage = UINT32_MAX;
     }
 
     if (matDef->emissive()) {
         patches.push_back({.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,});
+    } else {
+        mat.emissiveImage = UINT32_MAX;
     }
 
     if (matDef->occlusion()) {
         patches.push_back({.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,});
+    } else {
+        mat.occlusionImage = UINT32_MAX;
     }
 
     return AssetAddResult {
