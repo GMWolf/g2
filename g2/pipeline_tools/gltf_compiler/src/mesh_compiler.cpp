@@ -51,10 +51,12 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             }
         }
 
+        auto fbMaterialName = fbb.CreateString(std::string(primitive.material->name) + ".g2mat");
+
         auto fbIndices = fbb.CreateVector(indices);
         auto fbVertices = fbb.CreateVector(reinterpret_cast<uint8_t*>(vertices.data()), vertices.size() * sizeof(Vertex));
 
-        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, vertices.size(), sizeof(Vertex)));
+        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, vertices.size(), sizeof(Vertex), fbMaterialName));
     }
 
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);

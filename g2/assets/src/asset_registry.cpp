@@ -48,7 +48,7 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
                     for(auto patch : result.patches) {
                         std::cout << "\t\t@" << patch.name << std::endl;
                         patches.push_back(AssetReferencePatch {
-                            .name = p.path() / patch.name,
+                            .name = p.path().parent_path() / p.path().stem() / patch.name,
                             .index = patch.index,
                         });
                     }

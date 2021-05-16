@@ -7,6 +7,7 @@ table MeshPrimitive {
     vertexData: [ubyte];
     vertexCount: uint32;
     vertexAlignment: ubyte;
+    material: string;
 }
 
 table MeshData {

@@ -15,6 +15,7 @@
 #include "upload.h"
 #include <g2/assets/asset_registry.h>
 #include <vector>
+#include <g2/hat.h>
 
 namespace g2::gfx {
 
@@ -29,6 +30,7 @@ struct Primitive {
   size_t vertexCount;
   size_t baseIndex;
   size_t indexCount;
+  uint32_t material;
 };
 
 struct Mesh {
@@ -53,7 +55,9 @@ struct MeshAssetManager : public IAssetManager{
     UploadQueue* uploadQueue;
     MeshBuffer* meshBuffer;
 
-    std::vector<Mesh> meshes;
+    g2::hat<Mesh> meshes;
+
+    uint32_t nextMeshIndex = 0;
 
     AssetAddResult add_asset(std::span<const char> data) override;
     const char *ext() override;

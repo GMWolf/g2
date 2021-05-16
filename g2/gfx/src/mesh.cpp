@@ -115,13 +115,26 @@ g2::gfx::Mesh g2::gfx::addMesh(UploadQueue *uploadQueue, MeshBuffer *meshBuffer,
 g2::AssetAddResult g2::gfx::MeshAssetManager::add_asset(std::span<const char> data) {
     auto meshData = g2::gfx::GetMeshData(data.data());
 
-    auto &mesh = meshes.emplace_back(addMesh(uploadQueue, meshBuffer, meshData));
+    auto index = nextMeshIndex++;
 
-    uint32_t index = meshes.size() - 1;
+    meshes.emplace(index, addMesh(uploadQueue, meshBuffer, meshData));
+
+    auto& mesh = meshes[index];
+
+    std::vector<AssetReferencePatch> patches;
+    patches.reserve(meshData->primitives()->size());
+    int primIndex = 0;
+    for(auto prim : *meshData->primitives()) {
+        patches.push_back(AssetReferencePatch{
+            .name = prim->material()->c_str(),
+            .index = &mesh.primitives[primIndex++].material,
+        });
+    }
+
 
     return AssetAddResult{
             .index = index,
-            .patches = {},
+            .patches = std::move(patches),
     };
 
 }

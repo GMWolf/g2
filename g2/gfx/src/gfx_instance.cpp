@@ -609,7 +609,7 @@ namespace g2::gfx {
         assert(drawItems.size() == transforms.size());
 
         auto view = camera.inverse().matrix();
-        auto proj = glm::perspective(glm::radians(90.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, 100.0f);
+        auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, 100.0f);
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
                 proj * view,
@@ -798,7 +798,7 @@ namespace g2::gfx {
 
                     drawData[drawIndex] = {
                             .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                            .materialId = item.material,
+                            .materialId = prim.material,
                     };
 
                     vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),&drawIndex);

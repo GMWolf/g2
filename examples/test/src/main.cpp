@@ -42,29 +42,53 @@ int main() {
 
     auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/mesh_helmet_LP_13930damagedHelmet.g2mesh");
 
-    auto material = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/Material_MR.g2mat");
-
     auto mesh2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh");
 
-    auto material2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherPartsMat.g2mat");
-
     g2::gfx::DrawItem drawItems[]{
-        {.mesh = mesh, .material = material},
-        {.mesh = mesh2, .material = material2},
-        {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh"),
-         .material = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/material0.g2mat")},
+        {.mesh = mesh},
+        {.mesh = mesh2},
+        {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
     };
 
     float r = 0;
 
     g2::gfx::Transform camera{};
-    camera.pos = {0, 2, 0};
+    camera.pos = {0, 0, -1};
     camera.scale = 1;
-    camera.orientation = glm::quatLookAt(glm::vec3(0, -1, 0), glm::vec3(0,0,1));
+    camera.orientation = glm::quatLookAt(glm::vec3(0, 0, -1), glm::vec3(0,-1,0));
 
     while (!app.shouldClose()) {
         app.pollEvents();
         gfx.setFramebufferExtent(app.getWindowSize());
+
+        float dt = 0.0015;
+
+        float movSpd = 0.6;
+
+        if (app.inputState.keyDown(g2::KEYS::W)) {
+            camera.pos += camera.orientation * glm::vec3(0,0,-1) * dt * movSpd;
+        }
+        if (app.inputState.keyDown(g2::KEYS::S)) {
+            camera.pos += camera.orientation * glm::vec3(0,0,1) * dt * movSpd;
+        }
+        if (app.inputState.keyDown(g2::KEYS::A)) {
+            camera.pos += camera.orientation * glm::vec3(-1, 0, 0) * dt * movSpd;
+        }
+        if (app.inputState.keyDown(g2::KEYS::D)) {
+            camera.pos += camera.orientation * glm::vec3(1, 0, 0) * dt * movSpd;
+        }
+        if (app.inputState.keyDown(g2::KEYS::E)) {
+            camera.orientation *= glm::quat(glm::vec3(0, -1, 0) * dt);
+        }
+        if (app.inputState.keyDown(g2::KEYS::Q)) {
+            camera.orientation *= glm::quat(glm::vec3(0, 1, 0) * dt);
+        }
+        if (app.inputState.keyDown(g2::KEYS::SPACE)) {
+            camera.pos += camera.orientation * glm::vec3(0, -1, 0) * dt * movSpd;
+        }
+        if (app.inputState.keyDown(g2::KEYS::LEFT_CONTROL)) {
+            camera.pos += camera.orientation * glm::vec3(0, 1, 0) * dt * movSpd;
+        }
 
 
         g2::gfx::Transform transforms[]{
@@ -80,7 +104,7 @@ int main() {
                 },
                 {
                     .pos = {0,0,0},
-                    .scale = 1.0f,
+                    .scale = 0.02f,
                     .orientation = glm::quat(),
                 }
         };

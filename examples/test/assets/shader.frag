@@ -57,8 +57,14 @@ void main() {
 
     MaterialData material = materials[d.materialIndex];
 
+    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(1,0,1,1));
+
+    if(albedoAlpha.a < 0.05) {
+        discard;
+    }
+
     PBRFragment pbr;
-    pbr.albedo = sampleImage(material.albedo, uv, vec4(1,0,1,1)).rgb;
+    pbr.albedo = albedoAlpha.rgb;
     pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(0)).b;
     pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(0.8)).g;
     pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(0)).rgb;
@@ -70,7 +76,7 @@ void main() {
 
     LightFragment light;
     light.lightDirection = -normalize(vec3(0.75, -1, 0));
-    light.radiance = vec3(1.0);
+    light.radiance = vec3(2.0);
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
     vec3 ambient =  pbr.albedo * vec3(0.01) * texture(textures[material.occlusion], uv).r;
