@@ -91,6 +91,10 @@ namespace g2 {
         return glm::ivec2(width, height);
     }
 
+    double Application::getTime() const{
+        return glfwGetTime();
+    }
+
     std::span<const char *> getVkExtensions() {
         uint32_t count;
         const char **str = glfwGetRequiredInstanceExtensions(&count);

@@ -26,9 +26,10 @@ namespace g2 {
     class Application {
         struct Impl;
         std::unique_ptr<Impl> pImpl;
-
     public:
         InputState inputState;
+
+        double getTime() const;
 
         explicit Application(const ApplicationConfiguration &appConfig);
 

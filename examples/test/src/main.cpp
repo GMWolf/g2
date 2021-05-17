@@ -58,13 +58,17 @@ int main() {
     camera.scale = 1;
     camera.orientation = glm::quatLookAt(glm::vec3(0, 0, -1), glm::vec3(0,-1,0));
 
+    double lastTime = app.getTime();
+
     while (!app.shouldClose()) {
         app.pollEvents();
         gfx.setFramebufferExtent(app.getWindowSize());
 
-        float dt = 0.0015;
+        double time = app.getTime();
+        float dt = (float)time - lastTime;
+        lastTime = time;
 
-        float movSpd = 0.6;
+        float movSpd = 0.8;
 
         if (app.inputState.keyDown(g2::KEYS::W)) {
             camera.pos += camera.orientation * glm::vec3(0,0,-1) * dt * movSpd;
