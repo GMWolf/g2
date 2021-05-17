@@ -54,7 +54,7 @@ g2::gfx::Primitive g2::gfx::addMeshPrimitive(UploadQueue *uploadQueue, g2::gfx::
     auto vertexAlloc = allocateFromLinearBuffer(&meshBuffer->vertexBuffer, vertexBytes, meshFormat->vertexByteSize);
     assert(vertexAlloc.size);
 
-    uploadQueue->jobs.push({
+    uploadQueue->addJob({
         .priority = UINT16_MAX,
         .source = UploadSource{
             .data = std::span((char *) vertexData, vertexBytes),

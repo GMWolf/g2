@@ -610,6 +610,12 @@ namespace g2::gfx {
 
         assert(drawItems.size() == transforms.size());
 
+        pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
+
+        vkWaitForFences(pImpl->vkDevice, 1,
+                        &pImpl->inFlightFences[pImpl->currentFrame], true,
+                        UINT64_MAX);
+
         auto view = camera.inverse().matrix();
         auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, 100.0f);
 
@@ -617,12 +623,6 @@ namespace g2::gfx {
                 proj * view,
                 camera.pos,
         };
-
-        pImpl->uploadQueue.update(pImpl->vkDevice, pImpl->graphicsQueue);
-
-        vkWaitForFences(pImpl->vkDevice, 1,
-                        &pImpl->inFlightFences[pImpl->currentFrame], true,
-                        UINT64_MAX);
 
         uint32_t imageIndex;
         auto acquire = vkAcquireNextImageKHR(

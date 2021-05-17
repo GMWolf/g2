@@ -215,7 +215,7 @@ namespace g2::gfx {
                 return !jobs.empty();
             });
 
-            UploadJob job = std::move(jobs.top());
+            UploadJob job = jobs.top();
             jobs.pop();
             std::cout << "job count " << jobs.size() << std::endl;
             jlk.unlock();
