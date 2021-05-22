@@ -79,7 +79,7 @@ void main() {
     }
 
     LightFragment light;
-    light.lightDirection = -normalize(vec3(0.75, -1, 0));
+    light.lightDirection = -normalize(vec3(-0.75, -1, 0.35));
     light.radiance = vec3(2.0);
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));

@@ -51,6 +51,7 @@ namespace g2::gfx {
         SwapChain swapChain;
 
         VkImage depthImage;
+        VmaAllocation depthImageAlloc;
         VkImageView depthImageView;
 
         VkExtent2D framebufferExtent;
@@ -267,8 +268,8 @@ namespace g2::gfx {
                     .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             };
 
-            VmaAllocation allocation;
-            vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &allocation, nullptr);
+
+            vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &pImpl->depthImageAlloc, nullptr);
 
             VkImageViewCreateInfo viewInfo {
                 .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -652,7 +653,7 @@ namespace g2::gfx {
             assert(prevFormat == pImpl->swapChain.format);
 
             vkDestroyImageView(pImpl->vkDevice, pImpl->depthImageView, nullptr);
-            vkDestroyImage(pImpl->vkDevice, pImpl->depthImage, nullptr);
+            vmaDestroyImage(pImpl->allocator, pImpl->depthImage, pImpl->depthImageAlloc);
 
             {
                 VkImageCreateInfo imageInfo{
@@ -663,7 +664,7 @@ namespace g2::gfx {
                         .extent = VkExtent3D {
                                 .width = pImpl->swapChain.extent.width,
                                 .height = pImpl->swapChain.extent.height,
-                                .depth = 0,
+                                .depth = 1,
                         },
                         .mipLevels = 1,
                         .arrayLayers = 1,
@@ -678,8 +679,10 @@ namespace g2::gfx {
                         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
                 };
 
-                VmaAllocation allocation;
-                vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &allocation, nullptr);
+
+                auto dr = vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &pImpl->depthImageAlloc, nullptr);
+
+                assert(dr == VK_SUCCESS);
 
                 VkImageViewCreateInfo viewInfo {
                         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
