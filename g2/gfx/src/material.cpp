@@ -18,35 +18,44 @@ g2::AssetAddResult g2::gfx::MaterialAssetManager::add_asset(std::span<const char
 
     std::vector<AssetReferencePatch> patches;
 
-    if (matDef->albedo()) {
-        patches.push_back({.name = matDef->albedo()->c_str(), .index = &mat.albedoImage,});
+    if (matDef->albedoTexture()) {
+        patches.push_back({.name = matDef->albedoTexture()->c_str(), .index = &mat.albedoImage,});
     } else {
         mat.albedoImage = UINT32_MAX;
     }
 
-    if (matDef->normal()) {
-        patches.push_back({.name = matDef->normal()->c_str(), .index = &mat.normalImage,});
+    if (matDef->normalTexture()) {
+        patches.push_back({.name = matDef->normalTexture()->c_str(), .index = &mat.normalImage,});
     } else {
         mat.normalImage = UINT32_MAX;
     }
 
-    if (matDef->metallicRoughness()) {
-        patches.push_back({.name = matDef->metallicRoughness()->c_str(), .index = &mat.metallicRoughnessImage,});
+    if (matDef->metallicRoughnessTexture()) {
+        patches.push_back({.name = matDef->metallicRoughnessTexture()->c_str(), .index = &mat.metallicRoughnessImage,});
     } else {
         mat.metallicRoughnessImage = UINT32_MAX;
     }
 
-    if (matDef->emissive()) {
-        patches.push_back({.name = matDef->emissive()->c_str(), .index = &mat.emissiveImage,});
+    if (matDef->emissiveTexture()) {
+        patches.push_back({.name = matDef->emissiveTexture()->c_str(), .index = &mat.emissiveImage,});
     } else {
         mat.emissiveImage = UINT32_MAX;
     }
 
-    if (matDef->occlusion()) {
-        patches.push_back({.name = matDef->occlusion()->c_str(), .index = &mat.occlusionImage,});
+    if (matDef->occlusionTexture()) {
+        patches.push_back({.name = matDef->occlusionTexture()->c_str(), .index = &mat.occlusionImage,});
     } else {
         mat.occlusionImage = UINT32_MAX;
     }
+
+    mat.albedoMetallicFactor[0] = matDef->albedoFactor()->x();
+    mat.albedoMetallicFactor[1] = matDef->albedoFactor()->y();
+    mat.albedoMetallicFactor[2] = matDef->albedoFactor()->z();
+    mat.albedoMetallicFactor[3] = matDef->metallicFactor();
+    mat.emissiveRoughnessFactor[0] = matDef->emissiveFactor()->x();
+    mat.emissiveRoughnessFactor[1] = matDef->emissiveFactor()->y();
+    mat.emissiveRoughnessFactor[2] = matDef->emissiveFactor()->z();
+    mat.emissiveRoughnessFactor[3] = matDef->roughnessFactor();
 
     return AssetAddResult {
         .index = static_cast<uint32_t>(index),

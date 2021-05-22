@@ -19,7 +19,11 @@ struct MaterialData {
     uint normal;
     uint metallicRoughness;
     uint occlusion;
-    uint emmisive;
+
+    uint emmisive; uint pad0, pad1, pad2;
+
+    vec4 albedoMetallicFactor;
+    vec4 emissiveRoughnessFactor;
 };
 
 layout(set = 0, binding = 2) buffer MaterialDataBuffer {
@@ -57,7 +61,7 @@ void main() {
 
     MaterialData material = materials[d.materialIndex];
 
-    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(0.1,0.05,0.07,1));
+    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0));
 
     if(albedoAlpha.a < 0.05) {
         discard;
@@ -65,9 +69,9 @@ void main() {
 
     PBRFragment pbr;
     pbr.albedo = albedoAlpha.rgb;
-    pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(0)).b;
-    pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(0.8)).g;
-    pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(0)).rgb;
+    pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(material.albedoMetallicFactor.a)).b;
+    pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(material.emissiveRoughnessFactor.a)).g;
+    pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(material.emissiveRoughnessFactor.rgb, 1)).rgb;
 
     pbr.normal = normalize(normal);
     if (material.normal != INVALID_IMAGE) {

@@ -19,6 +19,10 @@ namespace g2::gfx {
         uint32_t metallicRoughnessImage;
         uint32_t occlusionImage;
         uint32_t emissiveImage;
+        uint32_t pad0, pad1, pad2;
+
+        float albedoMetallicFactor[4];
+        float emissiveRoughnessFactor[4];
     };
 
 
@@ -27,7 +31,7 @@ namespace g2::gfx {
         //g2::hat<Material> materials;
         size_t nextMaterialId = 0;
 
-        Material* materials;
+        Material* materials = nullptr;
 
         AssetAddResult add_asset(std::span<const char> data) override;
 
