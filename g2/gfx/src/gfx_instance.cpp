@@ -50,13 +50,9 @@ namespace g2::gfx {
         VkSurfaceKHR surface;
         SwapChain swapChain;
 
-        VkImage depthImage;
-        VmaAllocation depthImageAlloc;
-        VkImageView depthImageView;
-
         VkExtent2D framebufferExtent;
 
-        VkRenderPass renderPass;
+        RenderGraph* renderGraph;
 
         MeshAssetManager meshManager;
         ImageAssetManager imageManager;
@@ -65,8 +61,6 @@ namespace g2::gfx {
         IAssetManager* assetManagers[4];
 
         VkSampler sampler;
-
-        std::vector<VkFramebuffer> frameBuffers;
 
         VmaAllocator allocator;
 
@@ -98,7 +92,6 @@ namespace g2::gfx {
 
         size_t currentFrame = 0;
     };
-
 
 
     static VkInstance createVkInstance(const InstanceConfig &config) {
@@ -154,31 +147,6 @@ namespace g2::gfx {
         return pool;
     }
 
-    static void createFrameBuffers(VkDevice device,
-                                   std::span<VkFramebuffer> framebuffers,
-                                   std::span<VkImageView> imageViews,
-                                   VkImageView depthView,
-                                   VkExtent2D extent, VkRenderPass renderPass) {
-        for (size_t i = 0; i < imageViews.size(); i++) {
-            VkImageView attachments[] = {imageViews[i], depthView};
-
-            VkFramebufferCreateInfo frameBufferInfo{
-                    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                    .renderPass = renderPass,
-                    .attachmentCount = 2,
-                    .pAttachments = attachments,
-                    .width = extent.width,
-                    .height = extent.height,
-                    .layers = 1,
-            };
-
-            if (vkCreateFramebuffer(device, &frameBufferInfo, nullptr,
-                                    &framebuffers[i]) != VK_SUCCESS) {
-                std::cerr << "Error creating framebuffer\n";
-            }
-        }
-    }
-
     static VmaAllocator createAllocator(VkDevice device, VkInstance instance,
                                         VkPhysicalDevice physical_device) {
         VmaAllocatorCreateInfo allocatorInfo{
@@ -194,6 +162,55 @@ namespace g2::gfx {
     }
 
     void init() {}
+
+    static RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews, uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
+
+        ImageInfo images[] = {
+                {
+                    .size = {displayWidth, displayHeight},
+                    .format = VK_FORMAT_D32_SFLOAT,
+                },
+        };
+
+        AttachmentInfo colorAttachments[] = {
+                {   // Display attachment
+                    .image = UINT32_MAX,
+                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                    .clearValue = {
+                            .color = {0.0f, 0.0f, 0.0f, 1.0f},
+                    },
+                },
+        };
+
+        AttachmentInfo depthAttachments = {
+                .image = 0,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .clearValue = {
+                        .depthStencil = {1.0f, 0},
+                }
+        };
+
+        RenderPassInfo renderPasses[] = {
+                {
+                    .colorAttachments = colorAttachments,
+                    .depthAttachment = depthAttachments,
+                }
+        };
+
+
+        RenderGraphInfo renderGraphInfo {
+            .images = images,
+            .renderPasses = renderPasses,
+            .displayImages = displayViews,
+            .displayWidth = displayWidth,
+            .displayHeight = displayHeight,
+            .displayFormat = displayFormat,
+        };
+
+        return createRenderGraph(device, allocator, &renderGraphInfo);
+    }
 
     Instance::Instance(const InstanceConfig &config) {
         pImpl = std::make_unique<Impl>();
@@ -243,65 +260,7 @@ namespace g2::gfx {
 
         pImpl->swapChain = swapChain;
 
-        {
-            VkImageCreateInfo imageInfo{
-                    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-                    .flags = 0,
-                    .imageType = VK_IMAGE_TYPE_2D,
-                    .format = VK_FORMAT_D32_SFLOAT,
-                    .extent = VkExtent3D {
-                            .width = swapChain.extent.width,
-                            .height = swapChain.extent.height,
-                            .depth = 1,
-                    },
-                    .mipLevels = 1,
-                    .arrayLayers = 1,
-                    .samples = VK_SAMPLE_COUNT_1_BIT,
-                    .tiling = VK_IMAGE_TILING_OPTIMAL,
-                    .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            };
-
-            VmaAllocationCreateInfo allocInfo {
-                    .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-                    .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-            };
-
-
-            vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &pImpl->depthImageAlloc, nullptr);
-
-            VkImageViewCreateInfo viewInfo {
-                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                .image = pImpl->depthImage,
-                .viewType = VK_IMAGE_VIEW_TYPE_2D,
-                .format = VK_FORMAT_D32_SFLOAT,
-                .components = VkComponentMapping {
-                        .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                        .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                        .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                        .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-                },
-                .subresourceRange = {
-                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                        .baseMipLevel = 0,
-                        .levelCount = 1,
-                        .baseArrayLayer = 0,
-                        .layerCount = 1,
-                }
-            };
-
-            vkCreateImageView(pImpl->vkDevice, &viewInfo, nullptr, &pImpl->depthImageView);
-        }
-
-
-        pImpl->renderPass = createRenderPass(pImpl->vkDevice, swapChain.format);
-
-        // Create framebuffers
-        pImpl->frameBuffers.resize(swapChain.imageViews.size());
-        createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers, swapChain.imageViews,
-                           pImpl->depthImageView,
-                           swapChain.extent, pImpl->renderPass);
+        pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, swapChain.imageViews, swapChain.extent.width, swapChain.extent.height, swapChain.format);
 
         pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
 
@@ -420,7 +379,6 @@ namespace g2::gfx {
         }
 
 
-
         VkSamplerCreateInfo samplerInfo{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
@@ -502,19 +460,20 @@ namespace g2::gfx {
                 },
             };
 
-
-
             vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
 
-            std::vector<VkWriteDescriptorSet> sceneDescriptorWrites(MAX_FRAMES_IN_FLIGHT * 3);
+
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+                std::vector<VkWriteDescriptorSet> sceneDescriptorWrites( 3);
+
                 VkDescriptorBufferInfo sceneBufferInfo {
                         .buffer = pImpl->sceneBuffer[i].buffer,
                         .offset = 0,
                         .range = pImpl->sceneBuffer[i].size,
                 };
 
-                sceneDescriptorWrites[i * 3] = {
+                sceneDescriptorWrites[0] = {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
                         .dstBinding = 0,
@@ -532,7 +491,7 @@ namespace g2::gfx {
                         .range = pImpl->drawDataBuffer[i].size,
                 };
 
-                sceneDescriptorWrites[i * 3 + 1] = {
+                sceneDescriptorWrites[1] = {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
                         .dstBinding = 1,
@@ -550,7 +509,7 @@ namespace g2::gfx {
                         .range = pImpl->transformBuffer[i].size,
                 };
 
-                sceneDescriptorWrites[i * 3 + 2] = {
+                sceneDescriptorWrites[2] = {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = pImpl->descriptors.sceneDescriptorSets[i],
                         .dstBinding = 2,
@@ -561,12 +520,12 @@ namespace g2::gfx {
                         .pBufferInfo = &transformBufferInfo,
                         .pTexelBufferView = nullptr
                 };
+
+
+                vkUpdateDescriptorSets(pImpl->vkDevice, sceneDescriptorWrites.size(), sceneDescriptorWrites.data(), 0, nullptr);
             }
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, sceneDescriptorWrites.size(), sceneDescriptorWrites.data(), 0, nullptr);
-
         }
-
 
         pImpl->uploadWorker = std::thread([&](){
             pImpl->uploadQueue.processJobs();
@@ -585,12 +544,6 @@ namespace g2::gfx {
         }
 
         vkDestroyCommandPool(pImpl->vkDevice, pImpl->commandPool, nullptr);
-
-        for (auto framebuffer : pImpl->frameBuffers) {
-            vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
-        }
-
-        vkDestroyRenderPass(pImpl->vkDevice, pImpl->renderPass, nullptr);
 
         pImpl->swapChain.shutdown(pImpl->vkDevice);
 
@@ -652,71 +605,9 @@ namespace g2::gfx {
                                     pImpl->framebufferExtent, pImpl->queue_family_indices);
             assert(prevFormat == pImpl->swapChain.format);
 
-            vkDestroyImageView(pImpl->vkDevice, pImpl->depthImageView, nullptr);
-            vmaDestroyImage(pImpl->allocator, pImpl->depthImage, pImpl->depthImageAlloc);
-
-            {
-                VkImageCreateInfo imageInfo{
-                        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-                        .flags = 0,
-                        .imageType = VK_IMAGE_TYPE_2D,
-                        .format = VK_FORMAT_D32_SFLOAT,
-                        .extent = VkExtent3D {
-                                .width = pImpl->swapChain.extent.width,
-                                .height = pImpl->swapChain.extent.height,
-                                .depth = 1,
-                        },
-                        .mipLevels = 1,
-                        .arrayLayers = 1,
-                        .samples = VK_SAMPLE_COUNT_1_BIT,
-                        .tiling = VK_IMAGE_TILING_OPTIMAL,
-                        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                };
-
-                VmaAllocationCreateInfo allocInfo {
-                        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-                };
-
-
-                auto dr = vmaCreateImage(pImpl->allocator, &imageInfo, &allocInfo, &pImpl->depthImage, &pImpl->depthImageAlloc, nullptr);
-
-                assert(dr == VK_SUCCESS);
-
-                VkImageViewCreateInfo viewInfo {
-                        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                        .image = pImpl->depthImage,
-                        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-                        .format = VK_FORMAT_D32_SFLOAT,
-                        .components = VkComponentMapping {
-                                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                                .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-                        },
-                        .subresourceRange = {
-                                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-                                .baseMipLevel = 0,
-                                .levelCount = 1,
-                                .baseArrayLayer = 0,
-                                .layerCount = 1,
-                        }
-                };
-
-                vkCreateImageView(pImpl->vkDevice, &viewInfo, nullptr, &pImpl->depthImageView);
-            }
-
-
-            for (auto framebuffer : pImpl->frameBuffers) {
-                vkDestroyFramebuffer(pImpl->vkDevice, framebuffer, nullptr);
-            }
-
-
-
-            createFrameBuffers(pImpl->vkDevice, pImpl->frameBuffers,
-                               pImpl->swapChain.imageViews, pImpl->depthImageView, pImpl->swapChain.extent,
-                               pImpl->renderPass);
+            pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->swapChain.imageViews,
+                                                   pImpl->swapChain.extent.width, pImpl->swapChain.extent.height,
+                                                   pImpl->swapChain.format);
 
             return;
         } else if (acquire != VK_SUCCESS) {
@@ -738,38 +629,25 @@ namespace g2::gfx {
             std::cerr << "Failed to begin command buffer" << std::endl;
         }
 
-        VkClearValue clearValues[2];
-        clearValues[0].color =  {0.0f, 0.0f, 0.0f, 1.0f};
-        clearValues[1].depthStencil = {1.0f, 0};
+        VkRenderPassBeginInfo renderPassInfo = getRenderPassInfos(pImpl->renderGraph, imageIndex)[0];
 
-        VkRenderPassBeginInfo renderPassInfo{
-                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                .renderPass = pImpl->renderPass,
-                .framebuffer = pImpl->frameBuffers[imageIndex],
-                .renderArea =
-                VkRect2D{
-                        .offset = {0, 0},
-                        .extent = pImpl->swapChain.extent,
-                },
-                .clearValueCount = 2,
-                .pClearValues = clearValues,
-        };
-
-        VkViewport viewport{
+        VkViewport viewport {
                 .x = 0,
                 .y = 0,
-                .width = static_cast<float>(pImpl->swapChain.extent.width),
-                .height = static_cast<float>(pImpl->swapChain.extent.height),
+                .width = static_cast<float>(renderPassInfo.renderArea.extent.width),
+                .height = static_cast<float>(renderPassInfo.renderArea.extent.height),
                 .minDepth = 0.0f,
                 .maxDepth = 1.0f,
         };
-        VkRect2D scissor{
+        VkRect2D scissor {
                 .offset = {0, 0},
-                .extent = pImpl->swapChain.extent,
+                .extent = {renderPassInfo.renderArea.extent.width, renderPassInfo.renderArea.extent.height},
         };
 
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
         vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         VkDescriptorSet descriptorSets[] = {

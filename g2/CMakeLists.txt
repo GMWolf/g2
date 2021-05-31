@@ -1,5 +1,5 @@
 
-add_compile_options(-Werror)
+#add_compile_options(-Werror)
 
 add_subdirectory(util)
 add_subdirectory(archive)

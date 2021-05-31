@@ -29,7 +29,7 @@ add_library(g2_gfx
         src/upload.cpp
         src/upload.h
         src/material.cpp
-        src/material.h)
+        src/material.h )
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp

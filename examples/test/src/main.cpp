@@ -68,7 +68,7 @@ int main() {
         float dt = (float)time - lastTime;
         lastTime = time;
 
-        float movSpd = 0.8;
+        float movSpd = 2.5;
 
         if (app.inputState.keyDown(g2::KEYS::W)) {
             camera.pos += camera.orientation * glm::vec3(0,0,-1) * dt * movSpd;

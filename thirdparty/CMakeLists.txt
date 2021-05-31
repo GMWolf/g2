@@ -16,6 +16,7 @@ target_include_directories(vma INTERFACE VulkanMemoryAllocator/include)
 add_subdirectory(SPIRV-Headers)
 
 set(SPIRV_SKIP_EXECUTABLES ON)
+set(SPIRV_WERROR OFF)
 add_subdirectory(SPIRV-Tools)
 
 
