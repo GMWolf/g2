@@ -1,0 +1,14 @@
+file_extension "g2fx";
+
+namespace g2.gfx;
+
+table EffectPass {
+    passId: string;
+    pipeline: string;
+}
+
+table EffectDef {
+    passes: [EffectPass];
+}
+
+root_type EffectDef;

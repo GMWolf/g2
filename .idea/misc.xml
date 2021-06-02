@@ -15,11 +15,13 @@
       <file path="$PROJECT_DIR$/g2/gfx/gen" />
       <file path="$PROJECT_DIR$/g2/gfx/include" />
       <file path="$PROJECT_DIR$/g2/gfx/src" />
+      <file path="$PROJECT_DIR$/g2/pipeline_tools/effect_compiler/src" />
       <file path="$PROJECT_DIR$/g2/pipeline_tools/gltf_compiler/src" />
       <file path="$PROJECT_DIR$/g2/pipeline_tools/pipeline_build_generator/src" />
       <file path="$PROJECT_DIR$/g2/pipeline_tools/shader_compiler/flatbufferschemas" />
       <file path="$PROJECT_DIR$/g2/pipeline_tools/shader_compiler/gen" />
       <file path="$PROJECT_DIR$/g2/pipeline_tools/shader_compiler/src" />
+      <file path="$PROJECT_DIR$/g2/pipeline_tools/texture_compiler/src" />
       <file path="$PROJECT_DIR$/g2/platform/desktop" />
       <file path="$PROJECT_DIR$/g2/platform/include" />
       <file path="$PROJECT_DIR$/g2/util/include" />

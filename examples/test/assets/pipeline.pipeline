@@ -18,5 +18,8 @@
     {
       "format": "display"
     }
-  ]
+  ],
+  "depthAttachment" : {
+    "format": "d32_sfloat"
+  }
 }

@@ -82,7 +82,8 @@ namespace g2::gfx {
         return render_pass;
     }
 
-    VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats) {
+    VkRenderPass
+    createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats, VkFormat depthFormat) {
 
         std::vector<VkAttachmentDescription> attachments;
         attachments.reserve(imageFormats.size() + 1);
@@ -102,13 +103,18 @@ namespace g2::gfx {
             attachments.push_back(attachment);
         }
 
-        VkAttachmentReference colorAttachmentRef{
-                .attachment = 0,
-                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        std::vector<VkAttachmentReference> colorAttachmentRefs;
+        colorAttachmentRefs.reserve(attachments.size());
+        for (uint32_t index = 0; index < attachments.size(); index++) {
+            colorAttachmentRefs.push_back(
+                    {
+                            .attachment = index,
+                            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    });
         };
 
         VkAttachmentDescription depthAttachment{
-                .format = VK_FORMAT_D32_SFLOAT,
+                .format = depthFormat,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -121,14 +127,14 @@ namespace g2::gfx {
         attachments.push_back(depthAttachment);
 
         VkAttachmentReference depthAttachmentRef{
-                .attachment = 1,
+                .attachment = static_cast<uint32_t>(attachments.size() - 1),
                 .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
 
         VkSubpassDescription subpass{
                 .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                .colorAttachmentCount = 1,
-                .pColorAttachments = &colorAttachmentRef,
+                .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentRefs.size()),
+                .pColorAttachments = colorAttachmentRefs.data(),
                 .pDepthStencilAttachment = &depthAttachmentRef,
         };
 
@@ -153,6 +159,7 @@ namespace g2::gfx {
     }
 
     struct Pass {
+        std::string name;
         VkRenderPass renderPass;
         std::vector<VkFramebuffer> framebuffers;
         VkRect2D renderArea;
@@ -166,7 +173,7 @@ namespace g2::gfx {
 
         std::vector<Pass> passes;
 
-        std::vector<std::vector<VkRenderPassBeginInfo>> renderPassInfos;
+        std::vector<std::vector<PassInfo>> renderPassInfos;
     };
 
     static void getImageUsages(std::span<RenderPassInfo> passes, std::span<VkImageUsageFlags> outUsages) {
@@ -261,7 +268,7 @@ namespace g2::gfx {
 
             auto format = attachmentInfo.image == UINT32_MAX ? displayFormat : images[attachmentInfo.image].format;
 
-            VkAttachmentDescription attachment {
+            VkAttachmentDescription attachment{
                     .format = format,
                     .samples = VK_SAMPLE_COUNT_1_BIT,
                     .loadOp = attachmentInfo.loadOp,
@@ -275,8 +282,8 @@ namespace g2::gfx {
             attachments.push_back(attachment);
         }
 
-        std::vector<VkAttachmentReference> colourAttachmentRefs(attachments.size());
-        for (uint32_t index = 0; index < attachments.size(); index++) {
+        std::vector<VkAttachmentReference> colourAttachmentRefs(renderPassInfo->colorAttachments.size());
+        for (uint32_t index = 0; index < renderPassInfo->colorAttachments.size(); index++) {
             colourAttachmentRefs[index] = {
                     .attachment = index,
                     .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -300,13 +307,13 @@ namespace g2::gfx {
             attachments.push_back(depthAttachment);
 
             depthAttachmentRef = VkAttachmentReference{
-                    .attachment = 1,
+                    .attachment = static_cast<uint32_t>(attachments.size() - 1),
                     .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             };
 
         }
 
-        VkSubpassDescription subpass {
+        VkSubpassDescription subpass{
                 .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                 .colorAttachmentCount = static_cast<uint32_t>(colourAttachmentRefs.size()),
                 .pColorAttachments = colourAttachmentRefs.data(),
@@ -354,17 +361,17 @@ namespace g2::gfx {
             attachments.push_back(imageViews[renderPassInfo->depthAttachment->image]);
         }
 
-        VkFramebufferCreateInfo  framebufferInfo {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = renderPass,
-            .attachmentCount = static_cast<uint32_t>(attachments.size()),
-            .pAttachments = attachments.data(),
-            .width = width,
-            .height = height,
-            .layers = 1,
+        VkFramebufferCreateInfo framebufferInfo{
+                .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                .renderPass = renderPass,
+                .attachmentCount = static_cast<uint32_t>(attachments.size()),
+                .pAttachments = attachments.data(),
+                .width = width,
+                .height = height,
+                .layers = 1,
         };
 
-        if(vkCreateFramebuffer(device, &framebufferInfo, nullptr, outFramebuffer) != VK_SUCCESS) {
+        if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, outFramebuffer) != VK_SUCCESS) {
             std::cerr << "Error create framerbuffer\n";
         }
 
@@ -373,66 +380,74 @@ namespace g2::gfx {
     static void createRenderPasses(VkDevice device, const RenderGraphInfo *renderGraphInfo,
                                    std::span<VkImageView> imageViews,
                                    std::span<VkImageView> displayViews,
-                                   std::span<Pass> outPasses ) {
+                                   std::span<Pass> outPasses) {
 
         for (uint32_t index = 0; index < renderGraphInfo->renderPasses.size(); index++) {
             auto renderPassInfo = &renderGraphInfo->renderPasses[index];
             createRenderPass(device, renderPassInfo, renderGraphInfo->images, renderGraphInfo->displayFormat,
                              &outPasses[index].renderPass);
 
-
-            bool isDisplayRenderBuffer = std::find_if(renderPassInfo->colorAttachments.begin(), renderPassInfo->colorAttachments.end(),
-                                                      [](const AttachmentInfo& attachmentInfo) {
-                return attachmentInfo.image == UINT32_MAX;
-            }) != renderPassInfo->colorAttachments.end();
+            outPasses[index].name = renderPassInfo->name;
 
 
-            if(isDisplayRenderBuffer) {
-                uint32_t width = renderGraphInfo->displayWidth;
-                uint32_t height = renderGraphInfo->displayHeight;
+            bool isDisplayRenderBuffer =
+                    std::find_if(renderPassInfo->colorAttachments.begin(), renderPassInfo->colorAttachments.end(),
+                                 [](const AttachmentInfo &attachmentInfo) {
+                                     return attachmentInfo.image == UINT32_MAX;
+                                 }) != renderPassInfo->colorAttachments.end();
+
+
+            uint32_t width, height;
+
+            if (isDisplayRenderBuffer) {
+                width = renderGraphInfo->displayWidth;
+                height = renderGraphInfo->displayHeight;
 
                 outPasses[index].framebuffers.resize(displayViews.size());
-                for(int i = 0; i < displayViews.size(); i++) {
+                for (int i = 0; i < displayViews.size(); i++) {
                     createFramebuffer(device, renderPassInfo, imageViews, displayViews[i], outPasses[index].renderPass,
                                       width, height, &outPasses[index].framebuffers[i]);
                 }
 
-                outPasses[index].renderArea = {
-                        .offset = {0, 0},
-                        .extent = {width, height},
-                };
 
             } else {
-                uint32_t width = renderGraphInfo->images[renderPassInfo->colorAttachments[0].image].size.x;
-                uint32_t height = renderGraphInfo->images[renderPassInfo->colorAttachments[0].image].size.y;
-
+                if (renderPassInfo->colorAttachments.empty()) {
+                    width = renderGraphInfo->images[renderPassInfo->depthAttachment->image].size.x;
+                    height = renderGraphInfo->images[renderPassInfo->depthAttachment->image].size.y;
+                } else {
+                    width = renderGraphInfo->images[renderPassInfo->colorAttachments[0].image].size.x;
+                    height = renderGraphInfo->images[renderPassInfo->colorAttachments[0].image].size.y;
+                }
                 outPasses[index].framebuffers.resize(1);
                 createFramebuffer(device, renderPassInfo, imageViews, VK_NULL_HANDLE, outPasses[index].renderPass,
                                   width, height, &outPasses[index].framebuffers[0]);
-
-                outPasses[index].renderArea = {
-                        .offset = {0, 0},
-                        .extent = {width, height},
-                };
             }
 
-            for(auto attachment : renderPassInfo->colorAttachments) {
+            outPasses[index].renderArea = {
+                    .offset = {0, 0},
+                    .extent = {width, height},
+            };
+
+            for (auto attachment : renderPassInfo->colorAttachments) {
                 outPasses[index].clearValues.push_back(attachment.clearValue);
             }
-            if(renderPassInfo->depthAttachment) {
+            if (renderPassInfo->depthAttachment) {
                 outPasses[index].clearValues.push_back(renderPassInfo->depthAttachment->clearValue);
             }
 
         }
     }
 
-    static void createRenderPassInfos(std::span<Pass> passes, std::span<VkRenderPassBeginInfo> outRenderPassInfo, int displayImageIndex) {
+    static void createRenderPassInfos(std::span<Pass> passes, std::span<PassInfo> outRenderPassInfo,
+                                      int displayImageIndex) {
 
-        for(int i = 0; i < passes.size(); i++) {
-            outRenderPassInfo[i] = VkRenderPassBeginInfo{
+        for (int i = 0; i < passes.size(); i++) {
+            outRenderPassInfo[i].name = passes[i].name.c_str();
+            outRenderPassInfo[i].passBeginInfo = VkRenderPassBeginInfo{
                     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                     .renderPass = passes[i].renderPass,
-                    .framebuffer = passes[i].framebuffers.size() > 1 ? passes[i].framebuffers[displayImageIndex] : passes[i].framebuffers[0],
+                    .framebuffer = passes[i].framebuffers.size() > 1 ? passes[i].framebuffers[displayImageIndex]
+                                                                     : passes[i].framebuffers[0],
                     .renderArea = passes[i].renderArea,
                     .clearValueCount = static_cast<uint32_t>(passes[i].clearValues.size()),
                     .pClearValues = passes[i].clearValues.data(),
@@ -456,11 +471,12 @@ namespace g2::gfx {
 
         renderGraph->passes.resize(renderGraphInfo->renderPasses.size());
 
-        createRenderPasses(device, renderGraphInfo, renderGraph->imageViews, renderGraphInfo->displayImages, renderGraph->passes);
+        createRenderPasses(device, renderGraphInfo, renderGraph->imageViews, renderGraphInfo->displayImages,
+                           renderGraph->passes);
 
 
         renderGraph->renderPassInfos.resize(renderGraphInfo->displayImages.size());
-        for(int i = 0; i < renderGraphInfo->displayImages.size(); i++) {
+        for (int i = 0; i < renderGraphInfo->displayImages.size(); i++) {
             renderGraph->renderPassInfos[i].resize(renderGraph->passes.size());
             createRenderPassInfos(renderGraph->passes, renderGraph->renderPassInfos[i], i);
         }
@@ -468,7 +484,7 @@ namespace g2::gfx {
         return renderGraph;
     }
 
-    std::span<const VkRenderPassBeginInfo> getRenderPassInfos(const RenderGraph *renderGraph, uint32_t imageIndex) {
+    std::span<const PassInfo> getRenderPassInfos(const RenderGraph *renderGraph, uint32_t imageIndex) {
         return renderGraph->renderPassInfos[imageIndex];
     }
 

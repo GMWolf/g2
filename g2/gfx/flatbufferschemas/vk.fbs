@@ -38,6 +38,7 @@ enum BlendOp : ubyte
 enum Format : ushort {
     undefined = 0,
     rgba_u8 = 37,
+    d32_sfloat = 126,
     bc7_unorm = 145,
     bc7_srgb = 146,
     display = 65535,

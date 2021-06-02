@@ -14,7 +14,7 @@
 namespace g2::gfx {
     VkRenderPass createRenderPass(VkDevice device, VkFormat imageFormat);
 
-    VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats);
+    VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats, VkFormat depthFornat);
 
 
     struct ImageInfo {
@@ -30,6 +30,7 @@ namespace g2::gfx {
     };
 
     struct RenderPassInfo {
+        const char* name;
         std::span<AttachmentInfo> colorAttachments;
         std::optional<AttachmentInfo> depthAttachment;
     };
@@ -42,14 +43,17 @@ namespace g2::gfx {
         uint32_t displayWidth;
         uint32_t displayHeight;
         VkFormat displayFormat;
-
     };
 
     struct RenderGraph;
+    struct PassInfo {
+        const char* name;
+        VkRenderPassBeginInfo passBeginInfo;
+    };
 
     RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, const RenderGraphInfo *renderGraphInfo);
 
-    std::span<const VkRenderPassBeginInfo> getRenderPassInfos(const RenderGraph* renderGraph, uint32_t imageIndex);
+    std::span<const PassInfo> getRenderPassInfos(const RenderGraph* renderGraph, uint32_t imageIndex);
 
 }
 

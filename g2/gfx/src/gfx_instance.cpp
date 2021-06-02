@@ -25,6 +25,7 @@
 #include "upload.h"
 #include "material.h"
 #include <thread>
+#include "effect.h"
 
 namespace g2::gfx {
 
@@ -37,7 +38,8 @@ namespace g2::gfx {
 
     struct UScene{
         glm::mat4 mat;
-        glm::vec3 viewPos;
+        glm::vec3 viewPos; float pad;
+        glm::mat4 shadowMat;
     };
 
     struct Instance::Impl {
@@ -58,7 +60,9 @@ namespace g2::gfx {
         ImageAssetManager imageManager;
         PipelineAssetManager pipelineAssetManager;
         MaterialAssetManager materialManager;
-        IAssetManager* assetManagers[4];
+        EffectAssetManager effectAssetManager;
+
+        IAssetManager* assetManagers[5];
 
         VkSampler sampler;
 
@@ -165,11 +169,18 @@ namespace g2::gfx {
 
     static RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews, uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
+        uint32_t shadowMapWidth = 1024;
+        uint32_t shadowMapHeight = 1024;
+
         ImageInfo images[] = {
                 {
                     .size = {displayWidth, displayHeight},
                     .format = VK_FORMAT_D32_SFLOAT,
                 },
+                {
+                    .size = { shadowMapWidth, shadowMapHeight },
+                    .format = VK_FORMAT_D32_SFLOAT,
+                }
         };
 
         AttachmentInfo colorAttachments[] = {
@@ -192,8 +203,23 @@ namespace g2::gfx {
                 }
         };
 
+        AttachmentInfo shadowAttachment = {
+                .image = 1,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = {
+                        .depthStencil = { 1.0f, 0},
+                }
+        };
+
         RenderPassInfo renderPasses[] = {
                 {
+                    .name = "shadow",
+                    .colorAttachments = {},
+                    .depthAttachment = shadowAttachment,
+                },
+                {
+                    .name = "opaque",
                     .colorAttachments = colorAttachments,
                     .depthAttachment = depthAttachments,
                 }
@@ -420,6 +446,7 @@ namespace g2::gfx {
         pImpl->assetManagers[1] = &pImpl->pipelineAssetManager;
         pImpl->assetManagers[2] = &pImpl->meshManager;
         pImpl->assetManagers[3] = &pImpl->materialManager;
+        pImpl->assetManagers[4] = &pImpl->effectAssetManager;
 
         {
             //update set
@@ -629,71 +656,84 @@ namespace g2::gfx {
             std::cerr << "Failed to begin command buffer" << std::endl;
         }
 
-        VkRenderPassBeginInfo renderPassInfo = getRenderPassInfos(pImpl->renderGraph, imageIndex)[0];
 
-        VkViewport viewport {
-                .x = 0,
-                .y = 0,
-                .width = static_cast<float>(renderPassInfo.renderArea.extent.width),
-                .height = static_cast<float>(renderPassInfo.renderArea.extent.height),
-                .minDepth = 0.0f,
-                .maxDepth = 1.0f,
-        };
-        VkRect2D scissor {
-                .offset = {0, 0},
-                .extent = {renderPassInfo.renderArea.extent.width, renderPassInfo.renderArea.extent.height},
-        };
+        uint32_t passIndex = 0;
+        for(auto renderPassInfo : getRenderPassInfos(pImpl->renderGraph, imageIndex)) {
 
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-
-        vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        VkDescriptorSet descriptorSets[] = {
-                pImpl->descriptors.resourceDescriptorSet,
-                pImpl->descriptors.sceneDescriptorSets[pImpl->currentFrame],
-        };
-
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
-                                0, 2, descriptorSets, 0, nullptr);
-
-        vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            VkViewport viewport {
+                    .x = 0,
+                    .y = 0,
+                    .width = static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.width),
+                    .height = static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.height),
+                    .minDepth = 0.0f,
+                    .maxDepth = 1.0f,
+            };
+            VkRect2D scissor {
+                    .offset = {0, 0},
+                    .extent = {renderPassInfo.passBeginInfo.renderArea.extent.width, renderPassInfo.passBeginInfo.renderArea.extent.height},
+            };
 
 
-        //Do a draw now
-        if (!drawItems.empty()) {
+            auto effect = pImpl->effectAssetManager.effects[0];
 
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->pipelineAssetManager.pipelines[0]);
+            auto findPass = [&effect](const char* name) -> Effect::Pass& {
+                return *std::find_if(effect.passes.begin(), effect.passes.end(), [&name](Effect::Pass pass) {
+                    return strcmp(pass.passId, name) == 0;
+                });
+            };
 
+            auto pass = findPass(renderPassInfo.name);
+            auto pipeline =  pImpl->pipelineAssetManager.pipelines[pass.pipelineIndex];
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-            memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
+            vkCmdSetViewport(cmd, 0, 1, &viewport);
+            vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-            DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
+            vkCmdBeginRenderPass(cmd, &renderPassInfo.passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            uint32_t drawIndex = 0;
-            uint32_t itemIndex = 0;
-            for (DrawItem &item : drawItems) {
-                Mesh mesh = pImpl->meshManager.meshes[item.mesh];
-                for (Primitive &prim : mesh.primitives) {
+            VkDescriptorSet descriptorSets[] = {
+                    pImpl->descriptors.resourceDescriptorSet,
+                    pImpl->descriptors.sceneDescriptorSets[pImpl->currentFrame],
+            };
 
-                    pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
+                                    0, 2, descriptorSets, 0, nullptr);
 
-                    drawData[drawIndex] = {
-                            .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                            .materialId = prim.material,
-                    };
+            vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),&drawIndex);
-                    vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+            //Do a draw now
+            if (!drawItems.empty()) {
 
-                    drawIndex++;
+                memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
+
+                DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
+
+                uint32_t drawIndex = 0;
+                uint32_t itemIndex = 0;
+                for (DrawItem &item : drawItems) {
+                    Mesh mesh = pImpl->meshManager.meshes[item.mesh];
+                    for (Primitive &prim : mesh.primitives) {
+
+                        pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
+
+                        drawData[drawIndex] = {
+                                .baseVertex = static_cast<uint32_t>(prim.baseVertex),
+                                .materialId = prim.material,
+                        };
+
+                        vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),&drawIndex);
+                        vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+
+                        drawIndex++;
+                    }
+                    itemIndex++;
                 }
-                itemIndex++;
             }
-        }
 
-        vkCmdEndRenderPass(cmd);
+            vkCmdEndRenderPass(cmd);
+
+            passIndex++;
+        }
 
 
         if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {

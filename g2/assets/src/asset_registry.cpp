@@ -66,7 +66,13 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
             sources.push_back({p.path(), bytes});
 
             AssetAddResult result = m->add_asset(bytes);
-            patches.insert(patches.end(), result.patches.begin(), result.patches.end());
+            for(auto patch : result.patches) {
+                std::cout << "\t\t@" << patch.name << std::endl;
+                patches.push_back(AssetReferencePatch {
+                        .name = p.path().parent_path() / p.path().stem() / patch.name,
+                        .index = patch.index,
+                });
+            }
             assetMap.emplace(p.path().c_str(), result.index);
         }
     }

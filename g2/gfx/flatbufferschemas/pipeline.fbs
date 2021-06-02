@@ -27,6 +27,7 @@ table PipelineDef {
     modules: [ShaderModule];
     blending: [BlendAttachment];
     attachments: [Attachment];
+    depthAttachment: Attachment;
 }
 
 root_type PipelineDef;
