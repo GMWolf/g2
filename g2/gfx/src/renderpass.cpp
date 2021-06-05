@@ -158,6 +158,13 @@ namespace g2::gfx {
 
     }
 
+    struct PassTransitions {
+        std::vector<VkImageLayout> colorAttachmentInitialLayouts;
+        std::vector<VkImageLayout> colorAttachmentFinalLayouts;
+        VkImageLayout depthAttachmentInitialLayout;
+        VkImageLayout depthAttachmentFinalLayout;
+    };
+
     struct Pass {
         std::string name;
         VkRenderPass renderPass;
@@ -256,15 +263,16 @@ namespace g2::gfx {
         }
     }
 
-
     void createRenderPass(VkDevice device, const RenderPassInfo *renderPassInfo,
                           std::span<ImageInfo> images, VkFormat displayFormat,
+                          const PassTransitions* transitions,
                           VkRenderPass *outRenderPass) {
 
         std::vector<VkAttachmentDescription> attachments;
         attachments.reserve(renderPassInfo->colorAttachments.size() + 1);
 
-        for (auto attachmentInfo : renderPassInfo->colorAttachments) {
+        for(uint32_t index = 0; index < renderPassInfo->colorAttachments.size(); index++) {
+            auto& attachmentInfo = renderPassInfo->colorAttachments[index];
 
             auto format = attachmentInfo.image == UINT32_MAX ? displayFormat : images[attachmentInfo.image].format;
 
@@ -275,8 +283,8 @@ namespace g2::gfx {
                     .storeOp = attachmentInfo.storeOp,
                     .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    .initialLayout = transitions->colorAttachmentInitialLayouts[index],
+                    .finalLayout = transitions->colorAttachmentFinalLayouts[index],
             };
 
             attachments.push_back(attachment);
@@ -300,8 +308,8 @@ namespace g2::gfx {
                     .storeOp = renderPassInfo->depthAttachment->storeOp,
                     .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                    .initialLayout = transitions->depthAttachmentInitialLayout,
+                    .finalLayout = transitions->depthAttachmentFinalLayout,
             };
 
             attachments.push_back(depthAttachment);
@@ -313,7 +321,7 @@ namespace g2::gfx {
 
         }
 
-        VkSubpassDescription subpass{
+        VkSubpassDescription subpass {
                 .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                 .colorAttachmentCount = static_cast<uint32_t>(colourAttachmentRefs.size()),
                 .pColorAttachments = colourAttachmentRefs.data(),
@@ -321,7 +329,7 @@ namespace g2::gfx {
         };
 
 
-        VkRenderPassCreateInfo renderPassCreateInfo{
+        VkRenderPassCreateInfo renderPassCreateInfo {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                 .attachmentCount = static_cast<uint32_t>(attachments.size()),
                 .pAttachments = attachments.data(),
@@ -361,7 +369,7 @@ namespace g2::gfx {
             attachments.push_back(imageViews[renderPassInfo->depthAttachment->image]);
         }
 
-        VkFramebufferCreateInfo framebufferInfo{
+        VkFramebufferCreateInfo framebufferInfo {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 .renderPass = renderPass,
                 .attachmentCount = static_cast<uint32_t>(attachments.size()),
@@ -377,18 +385,74 @@ namespace g2::gfx {
 
     }
 
+    static VkImageLayout getNextImageLayout(const RenderGraphInfo *renderGraphInfo, uint32_t imageIndex, uint32_t passIndex, VkImageLayout initial) {
+
+        for(uint32_t pass = passIndex + 1; pass < renderGraphInfo->renderPasses.size(); pass++) {
+            auto& colorAttachments = renderGraphInfo->renderPasses[pass].colorAttachments;
+            for(uint32_t attachmentIndex = 0; attachmentIndex < colorAttachments.size(); attachmentIndex++) {
+                if(colorAttachments[attachmentIndex].image == imageIndex) {
+                    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                }
+            }
+
+            if(renderGraphInfo->renderPasses[pass].depthAttachment->image == imageIndex) {
+                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            }
+
+            auto& inputs = renderGraphInfo->renderPasses[pass].imageInputs;
+            for(uint32_t inputIndex = 0; inputIndex < inputs.size(); inputIndex++) {
+                if(inputs[inputIndex].image == imageIndex) {
+                    return inputs[inputIndex].layout;
+                }
+            }
+        }
+
+        return imageIndex == UINT32_MAX ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : initial;
+    }
+
     static void createRenderPasses(VkDevice device, const RenderGraphInfo *renderGraphInfo,
                                    std::span<VkImageView> imageViews,
                                    std::span<VkImageView> displayViews,
                                    std::span<Pass> outPasses) {
 
+        //Compute transitions
+        std::vector<VkImageLayout> imageLayouts(imageViews.size(), VK_IMAGE_LAYOUT_UNDEFINED);
+        VkImageLayout displayLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        std::vector<PassTransitions> passTransitions(renderGraphInfo->renderPasses.size());
+        for(uint32_t passIndex = 0; passIndex < renderGraphInfo->renderPasses.size(); passIndex++) {
+            auto& renderPassInfo = renderGraphInfo->renderPasses[passIndex];
+            auto& transition = passTransitions[passIndex];
+            transition.colorAttachmentInitialLayouts.resize(renderPassInfo.colorAttachments.size());
+            transition.colorAttachmentFinalLayouts.resize(renderPassInfo.colorAttachments.size());
+            for(uint32_t attachment = 0; attachment < renderPassInfo.colorAttachments.size(); attachment++) {
+                auto imageIndex = renderPassInfo.colorAttachments[attachment].image;
+                transition.colorAttachmentInitialLayouts[attachment] = imageIndex == UINT32_MAX ? displayLayout : imageLayouts[imageIndex];
+                auto nextImageLayout = getNextImageLayout(renderGraphInfo, imageIndex, passIndex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                transition.colorAttachmentFinalLayouts[attachment] = nextImageLayout;
+                if(imageIndex == UINT32_MAX) {
+                    displayLayout = nextImageLayout;
+                } else {
+                    imageLayouts[imageIndex] = nextImageLayout;
+                }
+            }
+
+            if(renderPassInfo.depthAttachment) {
+                transition.depthAttachmentInitialLayout = imageLayouts[renderPassInfo.depthAttachment->image];
+                auto nextImageLayout = getNextImageLayout(renderGraphInfo, renderPassInfo.depthAttachment->image, passIndex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+                transition.depthAttachmentFinalLayout = nextImageLayout;
+                imageLayouts[renderPassInfo.depthAttachment->image] = nextImageLayout;
+            }
+
+        }
+
+
+        //Create passes
         for (uint32_t index = 0; index < renderGraphInfo->renderPasses.size(); index++) {
             auto renderPassInfo = &renderGraphInfo->renderPasses[index];
             createRenderPass(device, renderPassInfo, renderGraphInfo->images, renderGraphInfo->displayFormat,
-                             &outPasses[index].renderPass);
+                             &passTransitions[index], &outPasses[index].renderPass);
 
             outPasses[index].name = renderPassInfo->name;
-
 
             bool isDisplayRenderBuffer =
                     std::find_if(renderPassInfo->colorAttachments.begin(), renderPassInfo->colorAttachments.end(),

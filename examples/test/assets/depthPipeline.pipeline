@@ -1,6 +1,6 @@
 {
   "shader" : {
-    "vertex" : "shader.vert"
+    "vertex" : "shadow.vert"
   },
   "blending" : [
     {

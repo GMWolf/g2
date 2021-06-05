@@ -29,10 +29,16 @@ namespace g2::gfx {
         VkClearValue clearValue;
     };
 
+    struct ImageInputInfo {
+        uint32_t image;
+        VkImageLayout layout;
+    };
+
     struct RenderPassInfo {
         const char* name;
         std::span<AttachmentInfo> colorAttachments;
         std::optional<AttachmentInfo> depthAttachment;
+        std::span<ImageInputInfo> imageInputs;
     };
 
     struct RenderGraphInfo {

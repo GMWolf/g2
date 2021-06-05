@@ -212,16 +212,25 @@ namespace g2::gfx {
                 }
         };
 
+        ImageInputInfo imageInputs[] = {
+                {
+                    .image = 1,
+                    .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                }
+        };
+
         RenderPassInfo renderPasses[] = {
                 {
                     .name = "shadow",
                     .colorAttachments = {},
                     .depthAttachment = shadowAttachment,
+                    .imageInputs = {},
                 },
                 {
                     .name = "opaque",
                     .colorAttachments = colorAttachments,
                     .depthAttachment = depthAttachments,
+                    .imageInputs = imageInputs,
                 }
         };
 
@@ -586,6 +595,45 @@ namespace g2::gfx {
         pImpl->framebufferExtent.height = size.y;
     }
 
+    //Adapted from Grasslands
+    static glm::mat4 computeShadowMat(const glm::mat4& camera, float farPlane, const glm::vec3& lightDir) {
+        glm::mat4 invViewProj = glm::inverse(camera);
+        float zNear = -1;
+        float zFar = 1;
+
+        glm::vec3 centroid(0,0,0);
+        glm::vec4 corners[8];
+        glm::vec2 a(1, -1);
+        for(int i = 0; i < 8; i++) {
+            corners[i].x = (i & 1) ? 1 : -1;
+            corners[i].y = (i & 2) ? 1 : -1;
+            corners[i].z = (i & 4) ? zFar : zNear;
+            corners[i].w = 1.0;
+            corners[i] = (invViewProj * corners[i]);
+            corners[i] /= corners[i].w;
+            centroid += glm::vec3(corners[i]);
+        }
+
+        centroid /= 8;
+
+        //compute view
+        glm::vec3 lightPos = centroid - (lightDir * farPlane);
+
+        glm::mat4 view = glm::lookAt(lightPos, centroid, glm::normalize(glm::cross(glm::normalize(glm::cross(lightDir, glm::vec3(0,1,0))), lightDir)));
+        //get min max
+        glm::vec3 min(std::numeric_limits<float>::max());
+        glm::vec3 max(-std::numeric_limits<float>::max());
+
+        for(glm::vec4& c : corners) {
+            glm::vec3 p = glm::vec3(view * c);
+            min = glm::min(min, p);
+            max = glm::max(max, p);
+        }
+
+        glm::mat4 projection = glm::ortho(min.x, max.x, min.y, max.y, 0.01f, -min.z);
+
+        return projection * view;
+    }
 
     void Instance::draw(std::span<DrawItem> drawItems,  std::span<Transform> transforms, Transform camera) {
 
@@ -598,11 +646,15 @@ namespace g2::gfx {
                         UINT64_MAX);
 
         auto view = camera.inverse().matrix();
-        auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, 100.0f);
+        float zfar = 75;
+        auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, zfar);
+
+        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::vec3(0, 1, 0));
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
                 proj * view,
-                camera.pos,
+                camera.pos, 0,
+                shadowMat
         };
 
         uint32_t imageIndex;
@@ -659,6 +711,8 @@ namespace g2::gfx {
 
         uint32_t passIndex = 0;
         for(auto renderPassInfo : getRenderPassInfos(pImpl->renderGraph, imageIndex)) {
+
+            if(strcmp(renderPassInfo.name, "shadow") == 0) continue;
 
             VkViewport viewport {
                     .x = 0,
