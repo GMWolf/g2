@@ -193,9 +193,13 @@ namespace g2::gfx {
                 assert(attachment.image < outUsages.size());
                 outUsages[attachment.image] |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             }
-            if (pass.depthAttachment) {
+            if ( pass.depthAttachment ) {
                 assert(pass.depthAttachment->image < outUsages.size());
                 outUsages[pass.depthAttachment->image] |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            }
+
+            for(auto input : pass.imageInputs) {
+                outUsages[input.image] |= VK_IMAGE_USAGE_SAMPLED_BIT;
             }
         }
     }
@@ -552,5 +556,9 @@ namespace g2::gfx {
         return renderGraph->renderPassInfos[imageIndex];
     }
 
+
+    std::span<const VkImageView> getImageViews(const RenderGraph* renderGraph) {
+        return renderGraph->imageViews;
+    }
 
 }  // namespace g2::gfx

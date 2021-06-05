@@ -35,12 +35,21 @@ namespace g2::gfx {
                 .descriptorCount = 1,
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
                 .pImmutableSamplers = nullptr,
+            },
+            // Shadow map
+            VkDescriptorSetLayoutBinding  {
+                    .binding = 3,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 1,
+                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .pImmutableSamplers = nullptr,
             }
     };
 
     static VkDescriptorBindingFlags resourceDescriptorBindingFlags[] {
         0,
         VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+        0,
         0,
     };
 
@@ -51,7 +60,7 @@ namespace g2::gfx {
             },
             VkDescriptorPoolSize {
                     .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = imageDescriptorCount,
+                    .descriptorCount = imageDescriptorCount + 1,
             },
     };
 
@@ -82,13 +91,12 @@ namespace g2::gfx {
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr,
-        }
+        } ,
     };
 
     static VkDescriptorBindingFlags sceneDescriptorBindingFlags[] {
             0,0,0
     };
-
 
 
     VkPushConstantRange pushConstantRange {

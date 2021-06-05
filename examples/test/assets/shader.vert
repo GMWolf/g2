@@ -26,6 +26,7 @@ layout( push_constant ) uniform PusConstant {
 layout(location = 0) out vec2 uv;
 layout(location = 1) out vec3 normal;
 layout(location = 2) out vec3 viewDir;
+layout(location = 3) out vec3 worldPos;
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
@@ -34,6 +35,7 @@ void main() {
     Transform transform = transforms[drawIndex];
 
     vec3 pos = applyTransform(vertex.pos.xyz, transform);
+    worldPos = pos;
 
     gl_Position = viewProj * vec4(pos, 1.0);
     uv = vertex.texcoords.xy;

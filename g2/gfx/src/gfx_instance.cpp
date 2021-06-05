@@ -169,8 +169,8 @@ namespace g2::gfx {
 
     static RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews, uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
-        uint32_t shadowMapWidth = 1024;
-        uint32_t shadowMapHeight = 1024;
+        uint32_t shadowMapWidth = 2048;
+        uint32_t shadowMapHeight = 2048;
 
         ImageInfo images[] = {
                 {
@@ -299,7 +299,7 @@ namespace g2::gfx {
 
         pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
 
-        VkCommandBufferAllocateInfo allocInfo{
+        VkCommandBufferAllocateInfo allocInfo {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
                 .commandPool = pImpl->commandPool,
                 .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -471,6 +471,12 @@ namespace g2::gfx {
                     .range = pImpl->materialBuffer.size,
             };
 
+            VkDescriptorImageInfo shadowMapInfo {
+                    .sampler = pImpl->sampler,
+                    .imageView = getImageViews(pImpl->renderGraph)[1],
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+
             VkWriteDescriptorSet descriptorWrites[]{
                 {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -494,9 +500,20 @@ namespace g2::gfx {
                         .pBufferInfo = &materialBufferInfo,
                         .pTexelBufferView = nullptr
                 },
+                {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = pImpl->descriptors.resourceDescriptorSet,
+                        .dstBinding = 3,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &shadowMapInfo,
+                        .pBufferInfo = nullptr,
+                        .pTexelBufferView = nullptr
+                },
             };
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
+            vkUpdateDescriptorSets(pImpl->vkDevice, 3, descriptorWrites, 0, nullptr);
 
 
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -617,7 +634,7 @@ namespace g2::gfx {
         centroid /= 8;
 
         //compute view
-        glm::vec3 lightPos = centroid - (lightDir * farPlane);
+        glm::vec3 lightPos = centroid - (lightDir * 1000.0f);
 
         glm::mat4 view = glm::lookAt(lightPos, centroid, glm::normalize(glm::cross(glm::normalize(glm::cross(lightDir, glm::vec3(0,1,0))), lightDir)));
         //get min max
@@ -649,7 +666,9 @@ namespace g2::gfx {
         float zfar = 75;
         auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, zfar);
 
-        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::vec3(0, 1, 0));
+        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::normalize(glm::vec3(-0.75, -1, 0.35)));
+        //shadowMat  = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 100.0f) * glm::lookAt(glm::vec3(0, -4, 0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
+
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
                 proj * view,
@@ -711,8 +730,6 @@ namespace g2::gfx {
 
         uint32_t passIndex = 0;
         for(auto renderPassInfo : getRenderPassInfos(pImpl->renderGraph, imageIndex)) {
-
-            if(strcmp(renderPassInfo.name, "shadow") == 0) continue;
 
             VkViewport viewport {
                     .x = 0,
