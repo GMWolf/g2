@@ -16,10 +16,10 @@ namespace g2::gfx {
 
     VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats, VkFormat depthFornat);
 
-
     struct ImageInfo {
         glm::uvec2 size;
         VkFormat format;
+        std::optional<uint32_t> binding;
     };
 
     struct AttachmentInfo {
@@ -57,9 +57,15 @@ namespace g2::gfx {
         VkRenderPassBeginInfo passBeginInfo;
     };
 
+    struct ImageBinding {
+        VkImageView imageView;
+        uint32_t binding;
+    };
+
     RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, const RenderGraphInfo *renderGraphInfo);
     std::span<const PassInfo> getRenderPassInfos(const RenderGraph* renderGraph, uint32_t imageIndex);
     std::span<const VkImageView> getImageViews(const RenderGraph* renderGraph);
+    std::span<const ImageBinding> getImageBindings(const RenderGraph* renderGraph);
 }
 
 #endif  // G2_RENDERPASS_H

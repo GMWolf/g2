@@ -52,3 +52,4 @@ include(stb.cmake)
 include(bc7e.cmake)
 
 add_subdirectory(zstd/build/cmake)
+target_compile_options(libzstd_static PRIVATE "-O3") #always optimize

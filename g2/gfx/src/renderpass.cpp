@@ -181,6 +181,7 @@ namespace g2::gfx {
         std::vector<Pass> passes;
 
         std::vector<std::vector<PassInfo>> renderPassInfos;
+        std::vector<ImageBinding> imageBindings;
     };
 
     static void getImageUsages(std::span<RenderPassInfo> passes, std::span<VkImageUsageFlags> outUsages) {
@@ -549,6 +550,16 @@ namespace g2::gfx {
             createRenderPassInfos(renderGraph->passes, renderGraph->renderPassInfos[i], i);
         }
 
+        renderGraph->imageBindings.reserve(renderGraphInfo->images.size());
+        for(int i = 0; i < renderGraphInfo->images.size(); i++) {
+            if(renderGraphInfo->images[i].binding) {
+                renderGraph->imageBindings.push_back(ImageBinding{
+                    .imageView = renderGraph->imageViews[i],
+                    .binding = *renderGraphInfo->images[i].binding,
+                });
+            }
+        }
+
         return renderGraph;
     }
 
@@ -559,6 +570,10 @@ namespace g2::gfx {
 
     std::span<const VkImageView> getImageViews(const RenderGraph* renderGraph) {
         return renderGraph->imageViews;
+    }
+
+    std::span<const ImageBinding> getImageBindings(const RenderGraph *renderGraph) {
+        return renderGraph->imageBindings;
     }
 
 }  // namespace g2::gfx

@@ -183,7 +183,9 @@ int main(int argc, char *argv[]) {
 
     g2::gfx::Attachment depthAttachment(static_cast<g2::gfx::Format>(g2::enumLookup(doc["depthAttachment"]["format"].GetString(), g2::gfx::FormatTypeTable()).value()));
 
-    auto fbpipeline = g2::gfx::CreatePipelineDefDirect(fbb, &fbmodules, &blend_attachments, &attachments, &depthAttachment);
+    g2::gfx::CullMode cullMode = static_cast<g2::gfx::CullMode>(g2::enumLookup(doc["cullMode"].GetString(), g2::gfx::CullModeTypeTable()).value());
+
+    auto fbpipeline = g2::gfx::CreatePipelineDefDirect(fbb, &fbmodules, &blend_attachments, &attachments, &depthAttachment, cullMode);
     fbb.Finish(fbpipeline);
 
     {

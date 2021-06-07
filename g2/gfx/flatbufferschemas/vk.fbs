@@ -50,3 +50,11 @@ enum ShaderStage : byte {
     vertex = 0x00000001,
     fragment = 0x00000010,
 }
+
+// VkCullModeFlagBits
+enum CullMode : byte {
+    none = 0,
+    front = 0x00000001,
+    back = 0x00000002,
+    front_and_back = 0x00000003,
+}

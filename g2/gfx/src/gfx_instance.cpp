@@ -31,6 +31,8 @@ namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
+    static const int SHADOWMAP_SIZE = 2048;
+
     struct DrawData {
         uint32_t baseVertex;
         uint32_t materialId;
@@ -40,6 +42,7 @@ namespace g2::gfx {
         glm::mat4 mat;
         glm::vec3 viewPos; float pad;
         glm::mat4 shadowMat;
+        glm::vec2 shadowMapScale;
     };
 
     struct Instance::Impl {
@@ -65,6 +68,7 @@ namespace g2::gfx {
         IAssetManager* assetManagers[5];
 
         VkSampler sampler;
+        VkSampler shadowSampler;
 
         VmaAllocator allocator;
 
@@ -169,17 +173,15 @@ namespace g2::gfx {
 
     static RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews, uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
-        uint32_t shadowMapWidth = 2048;
-        uint32_t shadowMapHeight = 2048;
-
         ImageInfo images[] = {
                 {
                     .size = {displayWidth, displayHeight},
                     .format = VK_FORMAT_D32_SFLOAT,
                 },
                 {
-                    .size = { shadowMapWidth, shadowMapHeight },
+                    .size = { SHADOWMAP_SIZE, SHADOWMAP_SIZE },
                     .format = VK_FORMAT_D32_SFLOAT,
+                    .binding = 3,
                 }
         };
 
@@ -246,6 +248,37 @@ namespace g2::gfx {
 
         return createRenderGraph(device, allocator, &renderGraphInfo);
     }
+
+    static void updateRenderGraphDescriptors(VkDevice device, VkDescriptorSet descriptorSet, VkSampler sampler, const RenderGraph* graph) {
+
+        auto imageBindings = getImageBindings(graph);
+        std::vector<VkDescriptorImageInfo> imageInfos(imageBindings.size());
+        for(int i = 0; i < imageBindings.size(); i++) {
+            imageInfos[i] = VkDescriptorImageInfo {
+                    .sampler = sampler,
+                    .imageView = imageBindings[i].imageView,
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+        }
+
+        std::vector<VkWriteDescriptorSet> writes(imageBindings.size());
+        for(int i = 0; i < imageBindings.size(); i++) {
+            writes[i] = VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = imageBindings[i].binding,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &imageInfos[i],
+                    .pBufferInfo = nullptr,
+                    .pTexelBufferView = nullptr
+            };
+        }
+
+        vkUpdateDescriptorSets(device, writes.size(), writes.data(), 0, nullptr);
+    }
+
 
     Instance::Instance(const InstanceConfig &config) {
         pImpl = std::make_unique<Impl>();
@@ -431,6 +464,25 @@ namespace g2::gfx {
 
         vkCreateSampler(pImpl->vkDevice, &samplerInfo, nullptr, &pImpl->sampler);
 
+        VkSamplerCreateInfo shadowSamplerInfo{
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                .magFilter = VK_FILTER_LINEAR,
+                .minFilter = VK_FILTER_LINEAR,
+                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+                .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                .mipLodBias = 0.0f,
+                .anisotropyEnable = VK_FALSE, // TODO enable anisotropy
+                .maxAnisotropy = 8, // TODO query max anisotropy
+                .compareEnable = true,
+                .compareOp = VK_COMPARE_OP_LESS,
+                .minLod = 0,
+                .maxLod = VK_LOD_CLAMP_NONE,
+        };
+
+        vkCreateSampler(pImpl->vkDevice, &shadowSamplerInfo, nullptr, &pImpl->shadowSampler);
+
         {
             pImpl->imageManager.device = pImpl->vkDevice;
             pImpl->imageManager.uploadQueue = &pImpl->uploadQueue;
@@ -471,11 +523,7 @@ namespace g2::gfx {
                     .range = pImpl->materialBuffer.size,
             };
 
-            VkDescriptorImageInfo shadowMapInfo {
-                    .sampler = pImpl->sampler,
-                    .imageView = getImageViews(pImpl->renderGraph)[1],
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
+            auto bindings = getImageBindings(pImpl->renderGraph);
 
             VkWriteDescriptorSet descriptorWrites[]{
                 {
@@ -500,21 +548,11 @@ namespace g2::gfx {
                         .pBufferInfo = &materialBufferInfo,
                         .pTexelBufferView = nullptr
                 },
-                {
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = pImpl->descriptors.resourceDescriptorSet,
-                        .dstBinding = 3,
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        .pImageInfo = &shadowMapInfo,
-                        .pBufferInfo = nullptr,
-                        .pTexelBufferView = nullptr
-                },
             };
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, 3, descriptorWrites, 0, nullptr);
+            vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
 
+            updateRenderGraphDescriptors(pImpl->vkDevice, pImpl->descriptors.resourceDescriptorSet, pImpl->shadowSampler, pImpl->renderGraph);
 
             for(int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
@@ -666,14 +704,15 @@ namespace g2::gfx {
         float zfar = 75;
         auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, zfar);
 
-        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::normalize(glm::vec3(-0.75, -1, 0.35)));
+        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::normalize(glm::vec3(-0.75, -3, 0.35)));
         //shadowMat  = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 100.0f) * glm::lookAt(glm::vec3(0, -4, 0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
 
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
                 proj * view,
                 camera.pos, 0,
-                shadowMat
+                shadowMat,
+                glm::vec2(1.0f / SHADOWMAP_SIZE, 1.0f / SHADOWMAP_SIZE),
         };
 
         uint32_t imageIndex;
@@ -706,6 +745,8 @@ namespace g2::gfx {
             pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->swapChain.imageViews,
                                                    pImpl->swapChain.extent.width, pImpl->swapChain.extent.height,
                                                    pImpl->swapChain.format);
+
+            updateRenderGraphDescriptors(pImpl->vkDevice, pImpl->descriptors.resourceDescriptorSet, pImpl->shadowSampler, pImpl->renderGraph);
 
             return;
         } else if (acquire != VK_SUCCESS) {

@@ -76,7 +76,7 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef *pipeline_
             .depthClampEnable = false,
             .rasterizerDiscardEnable = false,
             .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_BACK_BIT,
+            .cullMode = static_cast<VkCullModeFlags>(pipeline_def->cullMode()),
             .frontFace = VK_FRONT_FACE_CLOCKWISE,
             .depthBiasEnable = false,
             .depthBiasConstantFactor = 0.0f,

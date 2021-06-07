@@ -27,6 +27,7 @@ layout(location = 0) out vec2 uv;
 layout(location = 1) out vec3 normal;
 layout(location = 2) out vec3 viewDir;
 layout(location = 3) out vec3 worldPos;
+layout(location = 4) out vec4 shadowCoord;
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
@@ -41,4 +42,7 @@ void main() {
     uv = vertex.texcoords.xy;
     normal = rotate(vertex.normal.rgb, transform.orientation);
     viewDir = viewPos - pos;
+
+    shadowCoord = (shadowMat * vec4(pos + normal * 0.1, 1.0));
+    shadowCoord.xy = (shadowCoord.xy + 1) / 2.0f;
 }

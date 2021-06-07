@@ -21,5 +21,6 @@
   ],
   "depthAttachment" : {
     "format": "d32_sfloat"
-  }
+  },
+  "cullMode" : "back"
 }

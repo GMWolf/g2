@@ -28,6 +28,7 @@ table PipelineDef {
     blending: [BlendAttachment];
     attachments: [Attachment];
     depthAttachment: Attachment;
+    cullMode: CullMode;
 }
 
 root_type PipelineDef;

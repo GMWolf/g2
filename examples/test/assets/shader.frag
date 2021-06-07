@@ -13,9 +13,12 @@ layout(location = 0) in vec2 uv;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 viewDir;
 layout(location = 3) in vec3 worldPos;
+layout(location = 4) in vec4 shadowCoord;
 
 layout(set = 0, binding = 1)  uniform sampler2D textures[];
-layout(set = 0, binding = 3) uniform sampler2D shadowMap;
+layout(set = 0, binding = 3) uniform sampler2DShadow shadowMap;
+
+
 struct MaterialData {
     uint albedo;
     uint normal;
@@ -58,17 +61,20 @@ vec4 sampleImage(uint imageIndex, vec2 uv, vec4 def) {
     }
 }
 
+float shadow_offset_lookup(sampler2DShadow map, vec4 loc, vec2 offset)
+{
+    return textureProj(map, vec4(loc.xy + offset * shadowmapscale * loc.w, loc.z, loc.w));
+}
 
-float shadowIntensity(vec3 pos) {
-    vec4 shadowCoord = ((shadowMat) * vec4(pos, 1.0));
-    shadowCoord.xy /= shadowCoord.w;
-    shadowCoord.xy = (shadowCoord.xy + 1) / 2.0f;
-    vec4 shadowFrag =  texture(shadowMap, shadowCoord.xy);
+float shadowIntensity() {
 
-    return int(shadowFrag.x > shadowCoord.z);
 
-    //vec2 moments = shadowFrag.xy;
-    //return ChebyshecUpperBound(moments, shadowCoord.z);
+    float sum = 0; float x, y;
+    for (y = -1.5; y <= 1.5; y += 1.0)
+    for (x = -1.5; x <= 1.5; x += 1.0)
+        sum += shadow_offset_lookup(shadowMap, shadowCoord, vec2(x, y));
+
+    return sum / 16.0;
 }
 
 void main() {
@@ -95,14 +101,12 @@ void main() {
     }
 
     LightFragment light;
-    light.lightDirection = -normalize(vec3(-0.75, -1, 0.35));
+    light.lightDirection = -normalize(vec3(-0.75, -3, 0.35));
 
-
-
-    light.radiance = vec3(shadowIntensity(worldPos + (normal * 0.01)));//vec3(2.0);
+    light.radiance = vec3(2.0 * shadowIntensity());//vec3(2.0);
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
-    vec3 ambient =  pbr.albedo * vec3(0.02) * sampleImage(material.occlusion, uv, vec4(1)).r;
+    vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
 
     outColor = vec4(col + ambient, 1.0);
