@@ -576,4 +576,31 @@ namespace g2::gfx {
         return renderGraph->imageBindings;
     }
 
+    void destroyRenderGraph(VkDevice device, VmaAllocator allocator, RenderGraph *renderGraph) {
+
+        for(auto pass : renderGraph->passes) {
+            for(auto fb : pass.framebuffers) {
+                vkDestroyFramebuffer(device, fb, nullptr);
+            }
+            vkDestroyRenderPass(device, pass.renderPass, nullptr);
+        }
+        renderGraph->passes.clear();
+
+        for(auto view : renderGraph->imageViews) {
+            vkDestroyImageView(device, view, nullptr);
+        }
+        renderGraph->imageViews.clear();
+
+        for(size_t index = 0; index < renderGraph->images.size(); index++) {
+            vmaDestroyImage(allocator, renderGraph->images[index], renderGraph->imageAllocations[index]);
+        }
+        renderGraph->images.clear();
+        renderGraph->imageViews.clear();
+
+
+        delete(renderGraph);
+    }
+
+
+
 }  // namespace g2::gfx

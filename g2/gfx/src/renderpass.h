@@ -63,6 +63,7 @@ namespace g2::gfx {
     };
 
     RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, const RenderGraphInfo *renderGraphInfo);
+    void destroyRenderGraph(VkDevice device, VmaAllocator allocator, RenderGraph *renderGraph);
     std::span<const PassInfo> getRenderPassInfos(const RenderGraph* renderGraph, uint32_t imageIndex);
     std::span<const VkImageView> getImageViews(const RenderGraph* renderGraph);
     std::span<const ImageBinding> getImageBindings(const RenderGraph* renderGraph);

@@ -95,6 +95,7 @@ namespace g2::gfx {
     };
 
     void createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue);
+    void destroyUploadQueue(VkDevice deive, VmaAllocator allocator, UploadQueue* uploadQueue);
 
 }
 

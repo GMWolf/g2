@@ -40,6 +40,10 @@ void g2::gfx::initMeshBuffer(VmaAllocator allocator,
     createLinearBuffer(allocator, &indexBufferInfo, &indexAllocationInfo, &meshBuffer->indexBuffer);
 }
 
+void g2::gfx::destroyMeshBuffer(VmaAllocator allocator, g2::gfx::MeshBuffer *meshBuffer) {
+    vmaDestroyBuffer(allocator, meshBuffer->vertexBuffer.buffer, meshBuffer->vertexBuffer.allocation);
+    vmaDestroyBuffer(allocator, meshBuffer->indexBuffer.buffer, meshBuffer->indexBuffer.allocation);
+}
 
 g2::gfx::Primitive g2::gfx::addMeshPrimitive(UploadQueue *uploadQueue, g2::gfx::MeshBuffer *meshBuffer,
                                g2::gfx::MeshFormat *meshFormat, void *vertexData,

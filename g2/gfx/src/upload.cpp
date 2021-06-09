@@ -304,6 +304,15 @@ namespace g2::gfx {
 
     }
 
+    void destroyUploadQueue(VkDevice device, VmaAllocator allocator, UploadQueue* uploadQueue) {
+        vkDestroyCommandPool(device, uploadQueue->commandPool, nullptr);
+        for(int i = 0; i < UploadQueue::uploadFrameCount; i++) {
+            vmaUnmapMemory(allocator, uploadQueue->frames[i].stagingBuffer.allocation);
+            vmaDestroyBuffer(allocator, uploadQueue->frames[i].stagingBuffer.buffer, uploadQueue->frames[i].stagingBuffer.allocation);
+            vkDestroyFence(device, uploadQueue->frames[i].fence, nullptr);
+        }
+    }
+
     size_t UploadSource::getUncompressedDataSize() const {
         if (compressed) {
             return ZSTD_getDecompressedSize(data.data(), data.size_bytes());

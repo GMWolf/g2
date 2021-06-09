@@ -626,12 +626,32 @@ namespace g2::gfx {
     Instance::~Instance() {
         vkDeviceWaitIdle(pImpl->vkDevice);
 
+        destroyRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->renderGraph);
+
+        vmaUnmapMemory(pImpl->allocator, pImpl->materialBuffer.allocation);
+        vmaDestroyBuffer(pImpl->allocator, pImpl->materialBuffer.buffer, pImpl->materialBuffer.allocation);
+
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+            vmaUnmapMemory(pImpl->allocator, pImpl->sceneBuffer[i].allocation);
+            vmaDestroyBuffer(pImpl->allocator, pImpl->sceneBuffer[i].buffer, pImpl->sceneBuffer[i].allocation);
+            vmaUnmapMemory(pImpl->allocator, pImpl->drawDataBuffer[i].allocation);
+            vmaDestroyBuffer(pImpl->allocator, pImpl->drawDataBuffer[i].buffer, pImpl->drawDataBuffer[i].allocation);
+            vmaUnmapMemory(pImpl->allocator, pImpl->transformBuffer[i].allocation);
+            vmaDestroyBuffer(pImpl->allocator, pImpl->transformBuffer[i].buffer, pImpl->transformBuffer[i].allocation);
+
             vkDestroySemaphore(pImpl->vkDevice, pImpl->imageAvailableSemaphores[i],
                                nullptr);
             vkDestroySemaphore(pImpl->vkDevice, pImpl->renderFinishedSemaphores[i],
                                nullptr);
             vkDestroyFence(pImpl->vkDevice, pImpl->inFlightFences[i], nullptr);
+        }
+
+        destroyMeshBuffer(pImpl->allocator, &pImpl->meshBuffer);
+
+        for(auto image : pImpl->imageManager.images) {
+            vkDestroyImageView(pImpl->imageManager.device, image.view, nullptr);
+            vmaDestroyImage(pImpl->imageManager.allocator, image.image, image.allocation);
         }
 
         vkDestroyCommandPool(pImpl->vkDevice, pImpl->commandPool, nullptr);
@@ -741,6 +761,8 @@ namespace g2::gfx {
                     createSwapChain(pImpl->vkDevice, pImpl->physicalDevice, pImpl->surface,
                                     pImpl->framebufferExtent, pImpl->queue_family_indices);
             assert(prevFormat == pImpl->swapChain.format);
+
+            destroyRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->renderGraph);
 
             pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->swapChain.imageViews,
                                                    pImpl->swapChain.extent.width, pImpl->swapChain.extent.height,

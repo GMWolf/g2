@@ -44,7 +44,7 @@ struct MeshBuffer {
 };
 
 void initMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
-
+void destroyMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
 Primitive addMeshPrimitive(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, MeshFormat* meshFormat, void* vertexData, size_t vertexCount, void* indexData, size_t indexCount);
 
 Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, const MeshData* meshData);
