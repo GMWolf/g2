@@ -113,29 +113,36 @@ namespace g2::gfx {
                     });
         };
 
-        VkAttachmentDescription depthAttachment{
-                .format = depthFormat,
-                .samples = VK_SAMPLE_COUNT_1_BIT,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        };
+        VkAttachmentReference depthAttachmentRef;
+        VkAttachmentReference* pDepthAttachmentRef = nullptr;
 
-        attachments.push_back(depthAttachment);
+        if (depthFormat != VK_FORMAT_UNDEFINED) {
+            VkAttachmentDescription depthAttachment{
+                    .format = depthFormat,
+                    .samples = VK_SAMPLE_COUNT_1_BIT,
+                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            };
 
-        VkAttachmentReference depthAttachmentRef{
-                .attachment = static_cast<uint32_t>(attachments.size() - 1),
-                .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        };
+
+            attachments.push_back(depthAttachment);
+
+            depthAttachmentRef = {
+                    .attachment = static_cast<uint32_t>(attachments.size() - 1),
+                    .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            };
+            pDepthAttachmentRef = &depthAttachmentRef;
+        }
 
         VkSubpassDescription subpass{
                 .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                 .colorAttachmentCount = static_cast<uint32_t>(colorAttachmentRefs.size()),
                 .pColorAttachments = colorAttachmentRefs.data(),
-                .pDepthStencilAttachment = &depthAttachmentRef,
+                .pDepthStencilAttachment = pDepthAttachmentRef,
         };
 
 

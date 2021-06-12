@@ -17,12 +17,20 @@ namespace g2::gfx {
                     .binding = 0,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .descriptorCount = 1,
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .pImmutableSamplers = nullptr,
+            },
+            // Indices
+            VkDescriptorSetLayoutBinding {
+                    .binding = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .descriptorCount = 1,
+                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                     .pImmutableSamplers = nullptr,
             },
             // Textures
             VkDescriptorSetLayoutBinding {
-                .binding = 1,
+                .binding = 2,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = imageDescriptorCount,
                 .stageFlags = VK_SHADER_STAGE_ALL,
@@ -30,7 +38,7 @@ namespace g2::gfx {
             },
             // Material
             VkDescriptorSetLayoutBinding {
-                .binding = 2,
+                .binding = 3,
                 .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                 .descriptorCount = 1,
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -38,17 +46,36 @@ namespace g2::gfx {
             },
             // Shadow map
             VkDescriptorSetLayoutBinding  {
-                    .binding = 3,
+                    .binding = 4,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     .descriptorCount = 1,
                     .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
                     .pImmutableSamplers = nullptr,
-            }
+            },
+            // Visibility
+            VkDescriptorSetLayoutBinding  {
+                    .binding = 5,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 1,
+                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .pImmutableSamplers = nullptr,
+            },
+            // matid
+            VkDescriptorSetLayoutBinding  {
+                    .binding = 6,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 1,
+                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .pImmutableSamplers = nullptr,
+            },
     };
 
     static VkDescriptorBindingFlags resourceDescriptorBindingFlags[] {
         0,
+        0,
         VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
+        0,
+        0,
         0,
         0,
     };
@@ -60,7 +87,7 @@ namespace g2::gfx {
             },
             VkDescriptorPoolSize {
                     .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = imageDescriptorCount + 1,
+                    .descriptorCount = imageDescriptorCount + 5,
             },
     };
 
@@ -89,7 +116,7 @@ namespace g2::gfx {
             .binding = 2,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT |  VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = nullptr,
         } ,
     };

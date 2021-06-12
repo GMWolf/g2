@@ -1,6 +1,7 @@
 {
   "shader" : {
-    "vertex" : "shadow.vert"
+    "vertex" : "fullscreen.vert",
+    "fragment" : "viewVB.frag"
   },
   "blending" : [
     {
@@ -14,10 +15,10 @@
     }
   ],
   "attachments" : [
+    {
+      "format": "display"
+    }
   ],
-  "depthAttachment" : {
-    "format": "d32_sfloat"
-  },
-  "cullMode" : "front",
-  "depthCompare": "less"
+  "cullMode" : "none",
+  "depthCompare" : "less"
 }

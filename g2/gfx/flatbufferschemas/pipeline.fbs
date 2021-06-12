@@ -29,6 +29,7 @@ table PipelineDef {
     attachments: [Attachment];
     depthAttachment: Attachment;
     cullMode: CullMode;
+    depthCompare : CompareOp;
 }
 
 root_type PipelineDef;

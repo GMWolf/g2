@@ -22,5 +22,6 @@
   "depthAttachment" : {
     "format": "d32_sfloat"
   },
-  "cullMode" : "back"
+  "cullMode" : "back",
+  "depthCompare": "less"
 }

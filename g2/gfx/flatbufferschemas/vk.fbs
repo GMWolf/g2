@@ -38,6 +38,7 @@ enum BlendOp : ubyte
 enum Format : ushort {
     undefined = 0,
     rgba_u8 = 37,
+    r_u32 = 98,
     d32_sfloat = 126,
     bc7_unorm = 145,
     bc7_srgb = 146,
@@ -57,4 +58,16 @@ enum CullMode : byte {
     front = 0x00000001,
     back = 0x00000002,
     front_and_back = 0x00000003,
+}
+
+// VkCompareOp
+enum CompareOp : byte {
+VK_COMPARE_OP_NEVER = 0,
+    less = 1,
+    equal = 2,
+    less_or_equal = 3,
+    greater = 4,
+    not_equal = 5,
+    greater_or_equal = 6,
+    always = 7,
 }

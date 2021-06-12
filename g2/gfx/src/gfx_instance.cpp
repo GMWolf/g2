@@ -27,19 +27,27 @@
 #include <thread>
 #include "effect.h"
 
+#define SHADOWMAP_SIZE  2048
+
+#include "forward_render_graph.h"
+#include "vb_render_graph.h"
+
+
 namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    static const int SHADOWMAP_SIZE = 2048;
 
     struct DrawData {
+        uint32_t baseIndex;
         uint32_t baseVertex;
         uint32_t materialId;
     };
 
     struct UScene{
         glm::mat4 mat;
+        glm::mat4 view;
+        glm::mat4 projection;
         glm::vec3 viewPos; float pad;
         glm::mat4 shadowMat;
         glm::vec2 shadowMapScale;
@@ -171,83 +179,7 @@ namespace g2::gfx {
 
     void init() {}
 
-    static RenderGraph* createRenderGraph(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews, uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
-        ImageInfo images[] = {
-                {
-                    .size = {displayWidth, displayHeight},
-                    .format = VK_FORMAT_D32_SFLOAT,
-                },
-                {
-                    .size = { SHADOWMAP_SIZE, SHADOWMAP_SIZE },
-                    .format = VK_FORMAT_D32_SFLOAT,
-                    .binding = 3,
-                }
-        };
-
-        AttachmentInfo colorAttachments[] = {
-                {   // Display attachment
-                    .image = UINT32_MAX,
-                    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                    .clearValue = {
-                            .color = {0.0f, 0.0f, 0.0f, 1.0f},
-                    },
-                },
-        };
-
-        AttachmentInfo depthAttachments = {
-                .image = 0,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .clearValue = {
-                        .depthStencil = {1.0f, 0},
-                }
-        };
-
-        AttachmentInfo shadowAttachment = {
-                .image = 1,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = {
-                        .depthStencil = { 1.0f, 0},
-                }
-        };
-
-        ImageInputInfo imageInputs[] = {
-                {
-                    .image = 1,
-                    .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                }
-        };
-
-        RenderPassInfo renderPasses[] = {
-                {
-                    .name = "shadow",
-                    .colorAttachments = {},
-                    .depthAttachment = shadowAttachment,
-                    .imageInputs = {},
-                },
-                {
-                    .name = "opaque",
-                    .colorAttachments = colorAttachments,
-                    .depthAttachment = depthAttachments,
-                    .imageInputs = imageInputs,
-                }
-        };
-
-
-        RenderGraphInfo renderGraphInfo {
-            .images = images,
-            .renderPasses = renderPasses,
-            .displayImages = displayViews,
-            .displayWidth = displayWidth,
-            .displayHeight = displayHeight,
-            .displayFormat = displayFormat,
-        };
-
-        return createRenderGraph(device, allocator, &renderGraphInfo);
-    }
 
     static void updateRenderGraphDescriptors(VkDevice device, VkDescriptorSet descriptorSet, VkSampler sampler, const RenderGraph* graph) {
 
@@ -328,7 +260,9 @@ namespace g2::gfx {
 
         pImpl->swapChain = swapChain;
 
-        pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, swapChain.imageViews, swapChain.extent.width, swapChain.extent.height, swapChain.format);
+        pImpl->renderGraph = createRenderGraph_vb(pImpl->vkDevice, pImpl->allocator, swapChain.imageViews,
+                                                       swapChain.extent.width, swapChain.extent.height,
+                                                       swapChain.format);
 
         pImpl->commandPool = createCommandPool(pImpl->vkDevice, queueFamilyIndices);
 
@@ -517,13 +451,18 @@ namespace g2::gfx {
                     .range = pImpl->meshBuffer.vertexBuffer.size,
             };
 
+            VkDescriptorBufferInfo indexBufferInfo{
+                    .buffer = pImpl->meshBuffer.indexBuffer.buffer,
+                    .offset = 0,
+                    .range = pImpl->meshBuffer.indexBuffer.size,
+            };
+
             VkDescriptorBufferInfo materialBufferInfo{
                     .buffer = pImpl->materialBuffer.buffer,
                     .offset = 0,
                     .range = pImpl->materialBuffer.size,
             };
 
-            auto bindings = getImageBindings(pImpl->renderGraph);
 
             VkWriteDescriptorSet descriptorWrites[]{
                 {
@@ -538,19 +477,31 @@ namespace g2::gfx {
                     .pTexelBufferView = nullptr
                 },
                 {
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = pImpl->descriptors.resourceDescriptorSet,
-                        .dstBinding = 2,
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                        .pImageInfo = nullptr,
-                        .pBufferInfo = &materialBufferInfo,
-                        .pTexelBufferView = nullptr
+
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = pImpl->descriptors.resourceDescriptorSet,
+                    .dstBinding = 1,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &indexBufferInfo,
+                    .pTexelBufferView = nullptr
+                } ,
+                {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = pImpl->descriptors.resourceDescriptorSet,
+                    .dstBinding = 3,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &materialBufferInfo,
+                    .pTexelBufferView = nullptr
                 },
             };
 
-            vkUpdateDescriptorSets(pImpl->vkDevice, 2, descriptorWrites, 0, nullptr);
+            vkUpdateDescriptorSets(pImpl->vkDevice, 3, descriptorWrites, 0, nullptr);
 
             updateRenderGraphDescriptors(pImpl->vkDevice, pImpl->descriptors.resourceDescriptorSet, pImpl->shadowSampler, pImpl->renderGraph);
 
@@ -729,10 +680,12 @@ namespace g2::gfx {
 
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
-                proj * view,
-                camera.pos, 0,
-                shadowMat,
-                glm::vec2(1.0f / SHADOWMAP_SIZE, 1.0f / SHADOWMAP_SIZE),
+                .mat = proj * view,
+                .view = view,
+                .projection = proj,
+                .viewPos = camera.pos, .pad =0,
+                .shadowMat = shadowMat,
+                .shadowMapScale = glm::vec2(1.0f / SHADOWMAP_SIZE, 1.0f / SHADOWMAP_SIZE),
         };
 
         uint32_t imageIndex;
@@ -764,9 +717,11 @@ namespace g2::gfx {
 
             destroyRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->renderGraph);
 
-            pImpl->renderGraph = createRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->swapChain.imageViews,
-                                                   pImpl->swapChain.extent.width, pImpl->swapChain.extent.height,
-                                                   pImpl->swapChain.format);
+            pImpl->renderGraph = createRenderGraph_vb(pImpl->vkDevice, pImpl->allocator,
+                                                           pImpl->swapChain.imageViews,
+                                                           pImpl->swapChain.extent.width,
+                                                           pImpl->swapChain.extent.height,
+                                                           pImpl->swapChain.format);
 
             updateRenderGraphDescriptors(pImpl->vkDevice, pImpl->descriptors.resourceDescriptorSet, pImpl->shadowSampler, pImpl->renderGraph);
 
@@ -791,7 +746,6 @@ namespace g2::gfx {
         }
 
 
-        uint32_t passIndex = 0;
         for(auto renderPassInfo : getRenderPassInfos(pImpl->renderGraph, imageIndex)) {
 
             VkViewport viewport {
@@ -807,17 +761,15 @@ namespace g2::gfx {
                     .extent = {renderPassInfo.passBeginInfo.renderArea.extent.width, renderPassInfo.passBeginInfo.renderArea.extent.height},
             };
 
-
-            auto effect = pImpl->effectAssetManager.effects[0];
-
-            auto findPass = [&effect](const char* name) -> Effect::Pass& {
+            auto effect = pImpl->effectAssetManager.effects[0]; // TODO split visibility out of effect
+            auto findPass = [&effect](const char *name) -> Effect::Pass & {
                 return *std::find_if(effect.passes.begin(), effect.passes.end(), [&name](Effect::Pass pass) {
                     return strcmp(pass.passId, name) == 0;
                 });
             };
 
             auto pass = findPass(renderPassInfo.name);
-            auto pipeline =  pImpl->pipelineAssetManager.pipelines[pass.pipelineIndex];
+            auto pipeline = pImpl->pipelineAssetManager.pipelines[pass.pipelineIndex];
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
             vkCmdSetViewport(cmd, 0, 1, &viewport);
@@ -833,40 +785,54 @@ namespace g2::gfx {
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
                                     0, 2, descriptorSets, 0, nullptr);
 
-            vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            if (strcmp(renderPassInfo.name, "visibility_debug") == 0) {
 
-            //Do a draw now
-            if (!drawItems.empty()) {
-
-                memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
-
-                DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
-
-                uint32_t drawIndex = 0;
-                uint32_t itemIndex = 0;
-                for (DrawItem &item : drawItems) {
-                    Mesh mesh = pImpl->meshManager.meshes[item.mesh];
-                    for (Primitive &prim : mesh.primitives) {
-
-                        pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
-
-                        drawData[drawIndex] = {
-                                .baseVertex = static_cast<uint32_t>(prim.baseVertex),
-                                .materialId = prim.material,
-                        };
-
-                        vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(uint32_t),&drawIndex);
-                        vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
-
-                        drawIndex++;
-                    }
-                    itemIndex++;
+                for(uint32_t matId = 0; matId < pImpl->materialManager.nextMaterialId; matId++) {
+                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
+                                       sizeof(uint32_t), &matId);
+                    vkCmdDraw(cmd, 3, 1, 0, 0);
                 }
+
+            } else if (strcmp(renderPassInfo.name, "materialDepth") == 0){
+                vkCmdDraw(cmd, 3, 1, 0, 0);
+            } else {
+
+                vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+                //Do a draw now
+                if (!drawItems.empty()) {
+
+                    memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
+
+                    DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
+
+                    uint32_t drawIndex = 0;
+                    uint32_t itemIndex = 0;
+                    for (DrawItem &item : drawItems) {
+                        Mesh mesh = pImpl->meshManager.meshes[item.mesh];
+                        for (Primitive &prim : mesh.primitives) {
+
+                            pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
+
+                            drawData[drawIndex] = {
+                                    .baseIndex = static_cast<uint32_t>(prim.baseIndex),
+                                    .baseVertex = static_cast<uint32_t>(prim.baseVertex),
+                                    .materialId = prim.material,
+                            };
+
+                            vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
+                                               sizeof(uint32_t), &drawIndex);
+                            vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+
+                            drawIndex++;
+                        }
+                        itemIndex++;
+                    }
+                }
+
             }
 
             vkCmdEndRenderPass(cmd);
-
-            passIndex++;
         }
 
 

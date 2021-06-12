@@ -146,15 +146,17 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef *pipeline_
         }
     }
 
-    VkFormat depthFormat = static_cast<VkFormat>(pipeline_def->depthAttachment()->format());
+    VkFormat depthFormat =  pipeline_def->depthAttachment() ?
+            static_cast<VkFormat>(pipeline_def->depthAttachment()->format())
+            : VK_FORMAT_UNDEFINED;
 
     VkRenderPass render_pass = createCompatibilityRenderPass(device, formats, depthFormat);
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil{
+    VkPipelineDepthStencilStateCreateInfo depthStencil {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .depthTestEnable = VK_TRUE,
             .depthWriteEnable = VK_TRUE,
-            .depthCompareOp = VK_COMPARE_OP_LESS,
+            .depthCompareOp = static_cast<VkCompareOp>(pipeline_def->depthCompare()),
             .depthBoundsTestEnable = VK_FALSE,
             .stencilTestEnable = VK_FALSE,
             .front = {},

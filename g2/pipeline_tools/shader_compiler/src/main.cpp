@@ -181,11 +181,18 @@ int main(int argc, char *argv[]) {
         attachments[i] = g2::gfx::Attachment(format);
     }
 
-    g2::gfx::Attachment depthAttachment(static_cast<g2::gfx::Format>(g2::enumLookup(doc["depthAttachment"]["format"].GetString(), g2::gfx::FormatTypeTable()).value()));
+    g2::gfx::Attachment depthAttachment;
+    g2::gfx::Attachment* pDepthAttachment = nullptr;
+
+    if(doc.HasMember("depthAttachment")) {
+        depthAttachment = static_cast<g2::gfx::Format>(g2::enumLookup(doc["depthAttachment"]["format"].GetString(), g2::gfx::FormatTypeTable()).value());
+        pDepthAttachment = &depthAttachment;
+    }
 
     g2::gfx::CullMode cullMode = static_cast<g2::gfx::CullMode>(g2::enumLookup(doc["cullMode"].GetString(), g2::gfx::CullModeTypeTable()).value());
+    g2::gfx::CompareOp depthCompare = static_cast<g2::gfx::CompareOp>(g2::enumLookup(doc["depthCompare"].GetString(), g2::gfx::CompareOpTypeTable()).value());
 
-    auto fbpipeline = g2::gfx::CreatePipelineDefDirect(fbb, &fbmodules, &blend_attachments, &attachments, &depthAttachment, cullMode);
+    auto fbpipeline = g2::gfx::CreatePipelineDefDirect(fbb, &fbmodules, &blend_attachments, &attachments, pDepthAttachment, cullMode, depthCompare);
     fbb.Finish(fbpipeline);
 
     {

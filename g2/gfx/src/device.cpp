@@ -142,6 +142,7 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
   }
 
   VkPhysicalDeviceFeatures deviceFeatures{};
+  deviceFeatures.geometryShader = true;
 
   auto validationLayers = getValidationLayerNames();
 

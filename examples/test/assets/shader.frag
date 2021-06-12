@@ -15,8 +15,8 @@ layout(location = 2) in vec3 viewDir;
 layout(location = 3) in vec3 worldPos;
 layout(location = 4) in vec4 shadowCoord;
 
-layout(set = 0, binding = 1)  uniform sampler2D textures[];
-layout(set = 0, binding = 3) uniform sampler2DShadow shadowMap;
+layout(set = 0, binding = 2)  uniform sampler2D textures[];
+layout(set = 0, binding = 4) uniform sampler2DShadow shadowMap;
 
 
 struct MaterialData {
@@ -31,7 +31,7 @@ struct MaterialData {
     vec4 emissiveRoughnessFactor;
 };
 
-layout(set = 0, binding = 2) buffer MaterialDataBuffer {
+layout(set = 0, binding = 3) buffer MaterialDataBuffer {
     MaterialData materials[];
 };
 

@@ -1,6 +1,7 @@
 {
   "shader" : {
-    "vertex" : "shadow.vert"
+    "vertex" : "fullscreen.vert",
+    "fragment" : "materialDepth.frag"
   },
   "blending" : [
     {
@@ -18,6 +19,6 @@
   "depthAttachment" : {
     "format": "d32_sfloat"
   },
-  "cullMode" : "front",
-  "depthCompare": "less"
+  "cullMode" : "none",
+  "depthCompare" : "always"
 }

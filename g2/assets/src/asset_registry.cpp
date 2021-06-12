@@ -32,7 +32,7 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
     for(auto& p : fs::recursive_directory_iterator(path)) {
         if (strcmp(p.path().extension().c_str(), ".g2ar") == 0) {
-            std::cout << p << std::endl;
+            //std::cout << p << std::endl;
 
            auto bytes = map(p.path().c_str());
            sources.push_back({p.path(), bytes});
@@ -40,13 +40,13 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
             auto archive = archive::GetArchive(bytes.data());
 
             for(auto entry : *archive->entries()) {
-                std::cout << "\t" << entry->path()->c_str() << std::endl;
+                //std::cout << "\t" << entry->path()->c_str() << std::endl;
                 if (auto m = findAssetManager(fs::path(entry->path()->c_str()))) {
                     auto contents = std::span((char*)entry->contents()->data(), entry->contents()->size());
                     AssetAddResult result = m->add_asset(contents);
 
                     for(auto patch : result.patches) {
-                        std::cout << "\t\t@" << patch.name << std::endl;
+                        //std::cout << "\t\t@" << patch.name << std::endl;
                         patches.push_back(AssetReferencePatch {
                             .name = p.path().parent_path() / p.path().stem() / patch.name,
                             .index = patch.index,
@@ -60,14 +60,14 @@ void g2::AssetRegistry::includePath(const char* pathStr) {
 
 
         } else if(auto m = findAssetManager(p.path())) {
-            std::cout << p << std::endl;
+            //std::cout << p << std::endl;
 
             auto bytes = map(p.path().c_str());
             sources.push_back({p.path(), bytes});
 
             AssetAddResult result = m->add_asset(bytes);
             for(auto patch : result.patches) {
-                std::cout << "\t\t@" << patch.name << std::endl;
+                //std::cout << "\t\t@" << patch.name << std::endl;
                 patches.push_back(AssetReferencePatch {
                         .name = p.path().parent_path() / p.path().stem() / patch.name,
                         .index = patch.index,

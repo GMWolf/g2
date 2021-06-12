@@ -1,6 +1,7 @@
 {
   "shader" : {
-    "vertex" : "shadow.vert"
+    "vertex" : "visibility.vert",
+    "fragment": "visibility.frag"
   },
   "blending" : [
     {
@@ -14,10 +15,13 @@
     }
   ],
   "attachments" : [
+    {
+      "format": "r_u32"
+    }
   ],
   "depthAttachment" : {
     "format": "d32_sfloat"
   },
-  "cullMode" : "front",
+  "cullMode" : "back",
   "depthCompare": "less"
 }
