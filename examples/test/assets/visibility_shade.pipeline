@@ -1,6 +1,6 @@
 {
   "shader" : {
-    "vertex" : "fullscreen.vert",
+    "vertex" : "visibility_shade.vert",
     "fragment" : "visibility_shade.frag"
   },
   "blending" : [

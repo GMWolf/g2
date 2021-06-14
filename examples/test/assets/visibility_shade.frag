@@ -68,14 +68,14 @@ float shadow_offset_lookup(sampler2DShadow map, vec4 loc, vec2 offset)
     return textureProj(map, vec4(loc.xy + offset * shadowmapscale * loc.w, loc.z, loc.w));
 }
 
-//float shadowIntensity() {
-//    float sum = 0; float x, y;
-//    for (y = -1.5; y <= 1.5; y += 1.0)
-//    for (x = -1.5; x <= 1.5; x += 1.0)
-//    sum += shadow_offset_lookup(shadowMap, shadowCoord, vec2(x, y));
-//
-//    return sum / 16.0;
-//}
+float shadowIntensity(vec4 shadowCoord) {
+    float sum = 0; float x, y;
+    for (y = -1.5; y <= 1.5; y += 1.0)
+    for (x = -1.5; x <= 1.5; x += 1.0)
+    sum += shadow_offset_lookup(shadowMap, shadowCoord, vec2(x, y));
+
+    return sum / 16.0;
+}
 
 struct DerivativesOutput
 {
@@ -96,7 +96,7 @@ DerivativesOutput computePartialDerivatives(vec2 v[3])
 
 vec3 interpolateAttribute(mat3 attributes, vec3 db_dx, vec3 db_dy, vec2 d)
 {
-    vec3 attribute_x = attributes *  db_dx;// * ;
+    vec3 attribute_x = attributes * db_dx;;
     vec3 attribute_y = attributes * db_dy;
     vec3 attribute_s = attributes[0];
 
@@ -142,6 +142,23 @@ float depthLinearization(float depth, float near, float far)
 }
 
 
+vec3 barycentrics(vec2 p, vec2 a, vec2 b, vec2 c)
+{
+    float u, v, w;
+    vec2 v0 = b - a, v1 = c - a, v2 = p - a;
+    float d00 = dot(v0, v0);
+    float d01 = dot(v0, v1);
+    float d11 = dot(v1, v1);
+    float d20 = dot(v2, v0);
+    float d21 = dot(v2, v1);
+    float denom = d00 * d11 - d01 * d01;
+    v = (d11 * d20 - d01 * d21) / denom;
+    w = (d00 * d21 - d01 * d20) / denom;
+    u = 1.0f - v - w;
+
+    return vec3(u, v, w);
+}
+
 void main() {
 
 
@@ -152,9 +169,9 @@ void main() {
 
     DrawData draw = drawData[drawIndex];
 
-    if(draw.materialIndex != matId) {
-        discard;
-    }
+    //if(draw.materialIndex != matId) {
+    //    discard;
+    //}
 
     MaterialData material = materials[matId];
 
@@ -182,6 +199,11 @@ void main() {
     pos1 *= invw[1];
     pos2 *= invw[2];
 
+    //vec3 barys = barycentrics(screenPos.xy, pos0.xy, pos1.xy, pos2.xy);
+//
+    //vec3 position = v0pos * barys.x + v1pos * barys.y + v2pos * barys.z;
+
+
     vec2 pos_scr[3] = { pos0.xy, pos1.xy, pos2.xy };
 
     DerivativesOutput derivatives = computePartialDerivatives(pos_scr);
@@ -194,13 +216,23 @@ void main() {
 
     vec3 position = interpolateAttribute(mat3(v0pos * invw[0], v1pos * invw[1], v2pos * invw[2]), derivatives.db_dx, derivatives.db_dy, d) * w;
 
+    vec4 screenPos2 = viewProj * vec4(position, 1);
+    screenPos2 /= screenPos2.w;
+
+
+    //float3 position = mul(Get(transform)[VIEW_CAMERA].invVP, float4(In.screenPos * w, z, w)).xyz;
+
+    //vec3 position = (inverse(viewProj) * vec4(screenPos * w, z, w)).xyz;
+
+
+
     vec3 viewDir = viewPos - position;
 
     vec3 normal0 = rotate(vertex0.normal.xyz, transform.orientation) * invw[0];
     vec3 normal1 = rotate(vertex1.normal.xyz, transform.orientation) * invw[1];
     vec3 normal2 = rotate(vertex2.normal.xyz, transform.orientation) * invw[2];
 
-    vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d));
+    vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
     //outColor = vec4(normal / 10.0f, 1.0);
 
@@ -236,12 +268,17 @@ void main() {
     LightFragment light;
     light.lightDirection = -normalize(vec3(-0.75, -3, 0.35));
 
-    light.radiance = vec3(2.0);//vec3(2.0 * shadowIntensity());//vec3(2.0);
+
+
+    vec4 shadowCoord = (shadowMat * vec4(position + normal * 0.1, 1.0));
+    //shadowCoord.xy /= shadowCoord.w;
+    shadowCoord.xy = (shadowCoord.xy + 1) / 2.0f;
+
+    light.radiance = 1.0f + vec3(2.0 * shadowIntensity(shadowCoord));
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
     vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
     outColor = vec4(col + ambient, 1.0);
-    //outColor = vec4(position, 1.0);
-
+    //outColor.xyz = vec3(abs((screenPos2.xy - screenPos) * 1000.0f), 0);//abs(position - position2);
 }

@@ -1,6 +1,7 @@
 #version 450
 
 struct DrawData {
+    uint baseIndex;
     uint baseVertex;
     uint materialIndex;
 };
@@ -18,5 +19,5 @@ void main() {
     uint drawIndex = v >> 23;
     uint matId = drawData[drawIndex].materialIndex;
 
-    gl_FragDepth = matId;
+    gl_FragDepth = matId / 1000.0f;
 }

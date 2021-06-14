@@ -104,7 +104,11 @@ namespace g2::gfx {
         AttachmentInfo materialDepthReadAttachment {
             .image = 3,
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-            .storeOp = VK_ATTACHMENT_STORE_OP_NONE_QCOM,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        };
+
+        ImageInputInfo materialDepthInput[] = {
+                {.image = 2, .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
         };
 
         RenderPassInfo renderPasses[] = {
@@ -118,12 +122,13 @@ namespace g2::gfx {
                         .name = "visibility",
                         .colorAttachments = visPassColorAttachments,
                         .depthAttachment = depthAttachment,
-                        .imageInputs = imageInputs,
+                        .imageInputs = {},
                 },
                 {
                     .name = "materialDepth",
                     .colorAttachments = {},
                     .depthAttachment = materialDepthWriteAttachment,
+                    .imageInputs = materialDepthInput,
                 },
                 {
                     .name = "visibility_debug",

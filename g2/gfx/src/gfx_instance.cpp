@@ -788,6 +788,7 @@ namespace g2::gfx {
             if (strcmp(renderPassInfo.name, "visibility_debug") == 0) {
 
                 for(uint32_t matId = 0; matId < pImpl->materialManager.nextMaterialId; matId++) {
+
                     vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
                                        sizeof(uint32_t), &matId);
                     vkCmdDraw(cmd, 3, 1, 0, 0);
