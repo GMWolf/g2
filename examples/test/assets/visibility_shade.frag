@@ -189,9 +189,6 @@ void main() {
 
     vec3 position = interpolateAttribute(mat3(v0pos * invw[0], v1pos * invw[1], v2pos * invw[2]), derivatives.db_dx, derivatives.db_dy, d) * w;
 
-    vec4 screenPos2 = viewProj * vec4(position, 1);
-    screenPos2 /= screenPos2.w;
-
     vec3 viewDir = viewPos - position;
 
     vec3 normal0 = rotate(vertex0.normal.xyz, transform.orientation) * invw[0];
@@ -234,10 +231,10 @@ void main() {
     vec4 shadowCoord = (shadowMat * vec4(position + normal * 0.1, 1.0));
     shadowCoord.xy = (shadowCoord.xy + 1) / 2.0f;
 
-    light.radiance = vec3(2.0 * shadowIntensity(shadowCoord));
+    light.radiance = vec3(8.0 * shadowIntensity(shadowCoord));
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
-    vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1)).r;
+    vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
     outColor = vec4(col + ambient, 1.0);
 }

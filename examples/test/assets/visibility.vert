@@ -13,6 +13,8 @@ layout(push_constant) uniform PushConstant {
     uint drawIndex;
 };
 
+layout(location = 0) out vec2 uv;
+
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
@@ -23,5 +25,6 @@ void main() {
     vec3 pos = applyTransform(vertex.pos.xyz, transform);
 
     gl_Position = viewProj * vec4(pos, 1.0);
+    uv = vertex.texcoords.xy;
 
 }
