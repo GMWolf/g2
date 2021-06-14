@@ -141,24 +141,6 @@ float depthLinearization(float depth, float near, float far)
     return (2.0 * near) / (far + near - depth * (far - near));
 }
 
-
-vec3 barycentrics(vec2 p, vec2 a, vec2 b, vec2 c)
-{
-    float u, v, w;
-    vec2 v0 = b - a, v1 = c - a, v2 = p - a;
-    float d00 = dot(v0, v0);
-    float d01 = dot(v0, v1);
-    float d11 = dot(v1, v1);
-    float d20 = dot(v2, v0);
-    float d21 = dot(v2, v1);
-    float denom = d00 * d11 - d01 * d01;
-    v = (d11 * d20 - d01 * d21) / denom;
-    w = (d00 * d21 - d01 * d20) / denom;
-    u = 1.0f - v - w;
-
-    return vec3(u, v, w);
-}
-
 void main() {
 
 
@@ -168,10 +150,6 @@ void main() {
     uint triId = v & 0x007FFFFFu;
 
     DrawData draw = drawData[drawIndex];
-
-    //if(draw.materialIndex != matId) {
-    //    discard;
-    //}
 
     MaterialData material = materials[matId];
 
@@ -199,11 +177,6 @@ void main() {
     pos1 *= invw[1];
     pos2 *= invw[2];
 
-    //vec3 barys = barycentrics(screenPos.xy, pos0.xy, pos1.xy, pos2.xy);
-//
-    //vec3 position = v0pos * barys.x + v1pos * barys.y + v2pos * barys.z;
-
-
     vec2 pos_scr[3] = { pos0.xy, pos1.xy, pos2.xy };
 
     DerivativesOutput derivatives = computePartialDerivatives(pos_scr);
@@ -219,13 +192,6 @@ void main() {
     vec4 screenPos2 = viewProj * vec4(position, 1);
     screenPos2 /= screenPos2.w;
 
-
-    //float3 position = mul(Get(transform)[VIEW_CAMERA].invVP, float4(In.screenPos * w, z, w)).xyz;
-
-    //vec3 position = (inverse(viewProj) * vec4(screenPos * w, z, w)).xyz;
-
-
-
     vec3 viewDir = viewPos - position;
 
     vec3 normal0 = rotate(vertex0.normal.xyz, transform.orientation) * invw[0];
@@ -234,12 +200,9 @@ void main() {
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
-    //outColor = vec4(normal / 10.0f, 1.0);
-
     vec2 uv0 = vertex0.texcoords.xy * invw[0];
     vec2 uv1 = vertex1.texcoords.xy * invw[1];
     vec2 uv2 = vertex2.texcoords.xy * invw[2];
-
 
     GradientInterpolationResults uvInterpolation = interpolateAttributeWithGradient(mat3x2(uv0, uv1, uv2), derivatives.db_dx, derivatives.db_dy, d, 2.0f / vec2(textureSize(visbuffer, 0)));
 
@@ -250,7 +213,6 @@ void main() {
     vec2 uvdx = uvInterpolation.dx * w * mip;
     vec2 uvdy = uvInterpolation.dy * w * mip;
     vec2 uv = uvInterpolation.interp * w;
-
 
     vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0));
 
@@ -269,16 +231,13 @@ void main() {
     light.lightDirection = -normalize(vec3(-0.75, -3, 0.35));
 
 
-
     vec4 shadowCoord = (shadowMat * vec4(position + normal * 0.1, 1.0));
-    //shadowCoord.xy /= shadowCoord.w;
     shadowCoord.xy = (shadowCoord.xy + 1) / 2.0f;
 
-    light.radiance = 1.0f + vec3(2.0 * shadowIntensity(shadowCoord));
+    light.radiance = vec3(2.0 * shadowIntensity(shadowCoord));
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
     vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
     outColor = vec4(col + ambient, 1.0);
-    //outColor.xyz = vec3(abs((screenPos2.xy - screenPos) * 1000.0f), 0);//abs(position - position2);
 }

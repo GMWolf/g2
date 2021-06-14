@@ -3,16 +3,7 @@
 #include "transform.glsl"
 #include "scene.glsl"
 #include "geometry.glsl"
-
-struct DrawData {
-    uint baseIndex;
-    uint baseVertex;
-    uint materialIndex;
-};
-
-layout(set = 1, binding = 1) buffer DrawDataBlock {
-    DrawData drawData[];
-};
+#include "drawData.glsl"
 
 layout(set = 1, binding = 2) buffer TransformBlock {
     Transform transforms[];
