@@ -21,7 +21,7 @@ layout(location = 4) out vec4 shadowCoord;
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = vertices[vertexIndex];
+    Vertex vertex = unpackVertex(vertices[vertexIndex]);
 
     Transform transform = transforms[drawIndex];
 

@@ -8,6 +8,7 @@
 #include "pbr.glsl"
 #include "normals.glsl"
 #include "scene.glsl"
+#include "drawData.glsl"
 
 layout(location = 0) in vec2 uv;
 layout(location = 1) in vec3 normal;
@@ -34,16 +35,6 @@ struct MaterialData {
 layout(set = 0, binding = 3) buffer MaterialDataBuffer {
     MaterialData materials[];
 };
-
-struct DrawData {
-    uint baseVertex;
-    uint materialIndex;
-};
-
-layout(set = 1, binding = 1) buffer DrawDataBlock {
-    DrawData drawData[];
-};
-
 
 
 layout( push_constant ) uniform PusConstant {

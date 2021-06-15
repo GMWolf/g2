@@ -16,7 +16,7 @@ layout( push_constant ) uniform PusConstant {
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = vertices[vertexIndex];
+    Vertex vertex = unpackVertex(vertices[vertexIndex]);
 
     Transform transform = transforms[drawIndex];
     vec3 pos = applyTransform(vertex.pos.xyz, transform);

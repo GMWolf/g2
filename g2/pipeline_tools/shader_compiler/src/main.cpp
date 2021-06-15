@@ -19,6 +19,11 @@ namespace json = rapidjson;
 
 struct ShaderIncluder : public shaderc::CompileOptions::IncluderInterface {
 
+    std::vector<fs::path>& includes;
+
+    ShaderIncluder(std::vector<fs::path>& includes) : includes(includes) {
+    }
+
     struct ResultContainer {
         shaderc_include_result result;
         std::string sourceName;
@@ -29,6 +34,7 @@ struct ShaderIncluder : public shaderc::CompileOptions::IncluderInterface {
     GetInclude(const char *requested_source, shaderc_include_type type, const char *requesting_source,
                size_t include_depth) override {
         auto path = fs::path(requesting_source).parent_path() / requested_source;
+        includes.push_back(path);
         std::ifstream stream(path);
 
         auto result = new ResultContainer;
@@ -78,13 +84,14 @@ int main(int argc, char *argv[]) {
 
     shaderc::Compiler compiler;
     shaderc::CompileOptions options;
-    options.SetIncluder(std::make_unique<ShaderIncluder>());
+    std::vector<fs::path> deps;
+    options.SetIncluder(std::make_unique<ShaderIncluder>(deps));
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 
     flatbuffers::FlatBufferBuilder fbb(2048);
     std::vector<flatbuffers::Offset<g2::gfx::ShaderModule>> fbmodules;
 
-    std::vector<fs::path> deps;
+
 
     auto &shader = doc["shader"];
 

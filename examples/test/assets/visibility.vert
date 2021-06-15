@@ -18,7 +18,7 @@ layout(location = 0) out vec2 uv;
 
 void main() {
     uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = vertices[vertexIndex];
+    Vertex vertex = unpackVertex(vertices[vertexIndex]);
 
     Transform transform = transforms[drawIndex];
 

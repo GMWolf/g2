@@ -8,8 +8,8 @@
 #include "pbr.glsl"
 #include "normals.glsl"
 #include "scene.glsl"
-#include "geometry.glsl"
 #include "transform.glsl"
+#include "geometry.glsl"
 
 layout(location = 0) in vec2 screenPos;
 
@@ -151,15 +151,19 @@ void main() {
 
     DrawData draw = drawData[drawIndex];
 
+    //if (draw.materialIndex != matId) {
+    //    discard;
+    //}
+
     MaterialData material = materials[matId];
 
     uint index0 = (triId * 3 + 0) + draw.baseIndex;
     uint index1 = (triId * 3 + 1) + draw.baseIndex;
     uint index2 = (triId * 3 + 2) + draw.baseIndex;
 
-    Vertex vertex0 = vertices[indices[index0] + draw.baseVertex];
-    Vertex vertex1 = vertices[indices[index1] + draw.baseVertex];
-    Vertex vertex2 = vertices[indices[index2] + draw.baseVertex];
+    Vertex vertex0 = unpackVertex(vertices[indices[index0] + draw.baseVertex]);
+    Vertex vertex1 = unpackVertex(vertices[indices[index1] + draw.baseVertex]);
+    Vertex vertex2 = unpackVertex(vertices[indices[index2] + draw.baseVertex]);
 
     Transform transform = transforms[drawIndex];
 

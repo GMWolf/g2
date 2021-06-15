@@ -5,6 +5,9 @@
 #include "mesh_compiler.h"
 #include <g2/gfx/mesh_generated.h>
 #include <span>
+#include <glm/glm.hpp>
+#include <glm/gtc/packing.hpp>
+#include <glm/gtx/component_wise.hpp>
 
 namespace fb = flatbuffers;
 
@@ -13,10 +16,47 @@ static const char* GLTF_ATTRIBUTE_NORMAL = "NORMAL";
 static const char* GLTF_ATTRIBUTE_TEXCOORD = "TEXCOORD_0";
 
 struct Vertex {
-    float positions[4];
-    float normals[4];
-    float texcoords[4];
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texcoords;
 };
+
+
+struct PackedVertex {
+    glm::u16vec3 position;
+    glm::u8vec2 normals;
+
+    glm::u16vec2 texcoords;
+};
+static_assert(sizeof(PackedVertex) == 6 * sizeof(uint16_t));
+
+glm::vec2 encode_oct(const glm::vec3& va) {
+
+    glm::vec3 v = glm::normalize(va);
+
+    glm::vec2 p = glm::vec2(v.x, v.y) * (1.0f / (std::abs(v.x) + std::abs(v.y) + std::abs(v.z)));
+    if (v.z <= 0.0) {
+        glm::vec2 snz {
+            p.x >= 0.0 ? 1.0 : -1.0,
+            p.y >= 0.0 ? 1.0 : -1.0,
+        };
+
+        return (glm::vec2(1.0) - glm::abs(glm::vec2(p.y, p.x))) * snz;
+    } else {
+        return p;
+    }
+}
+
+PackedVertex packVertex(const Vertex& vertex) {
+
+    PackedVertex packed{};
+
+    packed.position = glm::packHalf(vertex.position);
+    packed.normals = glm::packSnorm<int8_t>(encode_oct(vertex.normal));
+    packed.texcoords = glm::packHalf(vertex.texcoords);
+    return packed;
+
+}
 
 
 std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
@@ -38,25 +78,28 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
             if (strcmp(attribute.name, GLTF_ATTRIBUTE_POSITION) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, vertices[vertexIndex].positions, 3);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].position.x, 3);
                 }
             } else if (strcmp(attribute.name, GLTF_ATTRIBUTE_NORMAL) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, vertices[vertexIndex].normals, 3);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].normal.x, 3);
                 }
             } else if (strcmp(attribute.name, GLTF_ATTRIBUTE_TEXCOORD) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, vertices[vertexIndex].texcoords, 2);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].texcoords.x, 2);
                 }
             }
         }
 
+        std::vector<PackedVertex> packedVertices(vertices.size());
+        std::transform(vertices.begin(), vertices.end(), packedVertices.begin(), packVertex);
+
         auto fbMaterialName = fbb.CreateString(std::string(primitive.material->name) + ".g2mat");
 
         auto fbIndices = fbb.CreateVector(indices);
-        auto fbVertices = fbb.CreateVector(reinterpret_cast<uint8_t*>(vertices.data()), vertices.size() * sizeof(Vertex));
+        auto fbVertices = fbb.CreateVector(reinterpret_cast<uint8_t*>(packedVertices.data()), packedVertices.size() * sizeof(PackedVertex));
 
-        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, vertices.size(), sizeof(Vertex), fbMaterialName));
+        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, packedVertices.size(), sizeof(PackedVertex), fbMaterialName));
     }
 
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);

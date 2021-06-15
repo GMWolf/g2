@@ -244,8 +244,9 @@ namespace g2::gfx {
 
         vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.graphics.value(), 0,
                          &pImpl->graphicsQueue);
-        vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.present.value(), 0,
-                         &pImpl->presentQueue);
+        //vkGetDeviceQueue(pImpl->vkDevice, queueFamilyIndices.present.value(), 0,
+        //                 &pImpl->presentQueue);
+        pImpl->presentQueue = pImpl->graphicsQueue;
 
         pImpl->allocator = createAllocator(pImpl->vkDevice, pImpl->vkInstance,
                                            pImpl->physicalDevice);

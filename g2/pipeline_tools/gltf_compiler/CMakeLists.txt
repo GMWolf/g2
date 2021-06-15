@@ -5,7 +5,7 @@ add_executable(g2_gltf_compiler
         src/material_compiler.cpp
         src/material_compiler.h
         src/cgltf_impl.cpp)
-target_link_libraries(g2_gltf_compiler PRIVATE cgltf g2_gfx_fbs flatbuffers g2_archive)
+target_link_libraries(g2_gltf_compiler PRIVATE cgltf g2_gfx_fbs flatbuffers g2_archive glm)
 
 
 function(g2_add_gltf input)

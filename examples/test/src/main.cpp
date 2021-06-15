@@ -45,11 +45,19 @@ int main() {
     auto mesh2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh");
 
 
-    g2::gfx::DrawItem drawItems[]{
-        {.mesh = mesh},
-        {.mesh = mesh2},
-        {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
+    std::vector<g2::gfx::DrawItem> drawItems {
+            {.mesh = mesh},
+            {.mesh = mesh2},
+            {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
     };
+
+    for(int x = 0; x < 20; x++) {
+        for(int y = 0; y < 10; y++) {
+            drawItems.push_back({.mesh = assetRegistry.getAssetIndex("assets/grass/grass.gltf/grass.g2mesh")});
+        }
+    }
+
+
 
     float r = 0;
 
@@ -95,7 +103,7 @@ int main() {
             camera.pos += camera.orientation * glm::vec3(0, 1, 0) * dt * movSpd;
         }
 
-        g2::gfx::Transform transforms[]{
+        std::vector<g2::gfx::Transform> transforms{
                 {
                         .pos = {1, 1, -2},
                         .scale = 1.0f,
@@ -112,6 +120,17 @@ int main() {
                     .orientation = glm::quat(),
                 }
         };
+
+        
+        for(int x = 0; x < 20; x++) {
+            for(int y = 0; y < 10; y++) {
+                transforms.push_back({
+                    .pos = {x - 10,0,  y - 5},
+                    .scale = 0.02f,
+                    .orientation = glm::quat(),
+                });
+            }
+        }
 
         gfx.draw(drawItems, transforms, camera);
 
