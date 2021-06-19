@@ -4,14 +4,8 @@ struct Vertex {
     vec2 texcoords;
 };
 
-struct PackedVertex {
-    uint posxy;
-    uint posznormal;
-    uint texcoords;
-};
-
 layout(set = 0, binding = 0) buffer Vertices {
-    PackedVertex vertices[];
+    uint vertexData[];
 };
 
 layout(set = 0, binding = 1) buffer Indices {
@@ -30,14 +24,39 @@ vec3 oct_to_vec3(vec2 e) {
 }
 
 
-Vertex unpackVertex(PackedVertex packed) {
-    Vertex vertex;
-
-    vertex.pos.xy = unpackHalf2x16(packed.posxy);
-    vertex.pos.z = unpackHalf2x16(packed.posznormal).x;
-
-    vertex.normal = oct_to_vec3(unpackSnorm4x8(packed.posznormal).zw);
-    vertex.texcoords = unpackHalf2x16(packed.texcoords);
-
-    return vertex;
+vec3 loadPosition(uint offset, uint index) {
+    //uint a = vertexData[offset + index * 2];
+    //uint b = vertexData[offset + index * 2 + 1];
+    //return vec4(unpackHalf2x16(a), unpackHalf2x16(b)).xyz;
+    return vec3(
+        uintBitsToFloat(vertexData[offset + index * 3 + 0]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 1]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 2])
+    );
 }
+
+vec3 loadNormal(uint offset, uint index) {
+    uint a = vertexData[offset + index / 2];
+    if ((index & 1) == 0) {
+        return oct_to_vec3(unpackSnorm4x8(a).xy);
+    } else {
+        return oct_to_vec3(unpackSnorm4x8(a).zw);
+    }
+}
+
+vec2 loadTexcoord(uint offset, uint index) {
+    uint a = vertexData[offset + index];
+    return unpackHalf2x16(a);
+}
+
+//Vertex unpackVertex(PackedVertex packed) {
+//    Vertex vertex;
+//
+//    vertex.pos.xy = unpackHalf2x16(packed.posxy);
+//    vertex.pos.z = unpackHalf2x16(packed.posznormal).x;
+//
+//    vertex.normal = oct_to_vec3(unpackSnorm4x8(packed.posznormal).zw);
+//    vertex.texcoords = unpackHalf2x16(packed.texcoords);
+//
+//    return vertex;
+//}

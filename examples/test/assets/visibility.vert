@@ -17,14 +17,16 @@ layout(location = 0) out vec2 uv;
 
 
 void main() {
-    uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = unpackVertex(vertices[vertexIndex]);
+
+    DrawData d = drawData[drawIndex];
+
+    vec3 inPos = loadPosition(d.positionOffset, gl_VertexIndex);
+    uv = loadTexcoord(d.texcoordOffset, gl_VertexIndex);
 
     Transform transform = transforms[drawIndex];
 
-    vec3 pos = applyTransform(vertex.pos.xyz, transform);
+    vec3 pos = applyTransform(inPos, transform);
 
     gl_Position = viewProj * vec4(pos, 1.0);
-    uv = vertex.texcoords.xy;
 
 }

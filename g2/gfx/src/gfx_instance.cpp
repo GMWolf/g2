@@ -40,7 +40,9 @@ namespace g2::gfx {
 
     struct DrawData {
         uint32_t baseIndex;
-        uint32_t baseVertex;
+        uint32_t positionOffset;
+        uint32_t normalOffset;
+        uint32_t texcoordOffset;
         uint32_t materialId;
     };
 
@@ -818,7 +820,9 @@ namespace g2::gfx {
 
                             drawData[drawIndex] = {
                                     .baseIndex = static_cast<uint32_t>(prim.baseIndex),
-                                    .baseVertex = static_cast<uint32_t>(prim.baseVertex),
+                                    .positionOffset = static_cast<uint32_t>(prim.positionOffset),
+                                    .normalOffset = static_cast<uint32_t>(prim.normalOffset),
+                                    .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset),
                                     .materialId = prim.material,
                             };
 

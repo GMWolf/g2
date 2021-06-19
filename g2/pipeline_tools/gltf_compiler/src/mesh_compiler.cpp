@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/packing.hpp>
 #include <glm/gtx/component_wise.hpp>
+#include <meshoptimizer.h>
 
 namespace fb = flatbuffers;
 
@@ -15,20 +16,13 @@ static const char* GLTF_ATTRIBUTE_POSITION = "POSITION";
 static const char* GLTF_ATTRIBUTE_NORMAL = "NORMAL";
 static const char* GLTF_ATTRIBUTE_TEXCOORD = "TEXCOORD_0";
 
-struct Vertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 texcoords;
+
+struct Meshlet {
+    size_t positionsOffset; // offset in words to positions
+    size_t normalsOffset; // offset in words to normals
+    size_t texcoordsOffset; // offset in words to texcoords
 };
 
-
-struct PackedVertex {
-    glm::u16vec3 position;
-    glm::u8vec2 normals;
-
-    glm::u16vec2 texcoords;
-};
-static_assert(sizeof(PackedVertex) == 6 * sizeof(uint16_t));
 
 glm::vec2 encode_oct(const glm::vec3& va) {
 
@@ -47,15 +41,20 @@ glm::vec2 encode_oct(const glm::vec3& va) {
     }
 }
 
-PackedVertex packVertex(const Vertex& vertex) {
 
-    PackedVertex packed{};
+template<class T>
+meshopt_Stream meshoptStream(const std::vector<T>& v) {
+    meshopt_Stream stream{};
+    stream.data = v.data();
+    stream.size = sizeof(T);
+    stream.stride = sizeof(T);
+    return stream;
+}
 
-    packed.position = glm::packHalf(vertex.position);
-    packed.normals = glm::packSnorm<int8_t>(encode_oct(vertex.normal));
-    packed.texcoords = glm::packHalf(vertex.texcoords);
-    return packed;
 
+template<class T>
+fb::Offset<fb::Vector<uint8_t>> createByteVector(fb::FlatBufferBuilder& fbb, const std::vector<T>& vec) {
+    return fbb.template CreateVector((uint8_t*)vec.data(), vec.size() * sizeof(T));
 }
 
 
@@ -67,39 +66,80 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
     for(const cgltf_primitive& primitive : std::span(mesh->primitives, mesh->primitives_count)) {
         std::vector<uint32_t> indices(primitive.indices->count);
-        std::vector<Vertex> vertices(primitive.attributes[0].data->count);
+        std::vector<glm::vec3> positions(primitive.attributes[0].data->count);
+        std::vector<glm::vec3> normals(primitive.attributes[0].data->count);
+        std::vector<glm::vec2> texcoords(primitive.attributes[0].data->count);
 
         for(int index = 0; index < primitive.indices->count; index++) {
             indices[index] = cgltf_accessor_read_index(primitive.indices, index);
         }
 
         for(const cgltf_attribute& attribute : std::span(primitive.attributes, primitive.attributes_count)) {
-            assert(attribute.data->count == vertices.size());
+            assert(attribute.data->count == positions.size());
 
             if (strcmp(attribute.name, GLTF_ATTRIBUTE_POSITION) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].position.x, 3);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &positions[vertexIndex].x, 3);
                 }
             } else if (strcmp(attribute.name, GLTF_ATTRIBUTE_NORMAL) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].normal.x, 3);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &normals[vertexIndex].x, 3);
                 }
             } else if (strcmp(attribute.name, GLTF_ATTRIBUTE_TEXCOORD) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
-                    cgltf_accessor_read_float(attribute.data, vertexIndex, &vertices[vertexIndex].texcoords.x, 2);
+                    cgltf_accessor_read_float(attribute.data, vertexIndex, &texcoords[vertexIndex].x, 2);
                 }
             }
         }
 
-        std::vector<PackedVertex> packedVertices(vertices.size());
-        std::transform(vertices.begin(), vertices.end(), packedVertices.begin(), packVertex);
+
+        { // Remap
+            meshopt_Stream streams[]{
+                    meshoptStream(positions),
+                    meshoptStream(normals),
+                    meshoptStream(texcoords)
+            };
+
+            std::vector<uint32_t> remap(indices.size());
+            uint32_t remapVertexCount = meshopt_generateVertexRemapMulti(remap.data(), indices.data(), indices.size(), positions.size(), streams,
+                                             3);
+            meshopt_remapIndexBuffer(indices.data(), indices.data(), indices.size(), remap.data());
+            meshopt_remapVertexBuffer(positions.data(), positions.data(), positions.size(), sizeof(glm::vec3), remap.data());
+            positions.resize(remapVertexCount);
+            meshopt_remapVertexBuffer(normals.data(), normals.data(), normals.size(), sizeof(glm::vec3), remap.data());
+            normals.resize(remapVertexCount);
+            meshopt_remapVertexBuffer(texcoords.data(), texcoords.data(), texcoords.size(), sizeof(glm::vec2), remap.data());
+            texcoords.resize(remapVertexCount);
+        }
+
+        meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), positions.size());
+
+
+        std::vector<glm::vec3> packedPositions(positions.size());
+        std::transform(positions.begin(), positions.end(), packedPositions.begin(), [](glm::vec3 pos) {
+           //return glm::packHalf(glm::vec4(pos, 0));
+           return pos;
+        });
+
+        std::vector<glm::u8vec2> packedNormals(normals.size());
+        std::transform(normals.begin(), normals.end(), packedNormals.begin(), [](glm::vec3 normal) {
+            return glm::packSnorm<int8_t>(encode_oct(normal));
+        });
+
+        std::vector<glm::u16vec2> packedTexcoords(texcoords.size());
+        std::transform(texcoords.begin(), texcoords.end(), packedTexcoords.begin(), [](glm::vec2 texcoord) {
+            return glm::packHalf(texcoord);
+        });
+
+        auto fbPositions = createByteVector(fbb, packedPositions);
+        auto fbNormals = createByteVector(fbb, packedNormals);
+        auto fbTexcoords = createByteVector(fbb, packedTexcoords);
 
         auto fbMaterialName = fbb.CreateString(std::string(primitive.material->name) + ".g2mat");
 
         auto fbIndices = fbb.CreateVector(indices);
-        auto fbVertices = fbb.CreateVector(reinterpret_cast<uint8_t*>(packedVertices.data()), packedVertices.size() * sizeof(PackedVertex));
 
-        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbVertices, packedVertices.size(), sizeof(PackedVertex), fbMaterialName));
+        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, packedPositions.size(), fbMaterialName));
     }
 
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);

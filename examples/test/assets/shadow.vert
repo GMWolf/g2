@@ -15,11 +15,12 @@ layout( push_constant ) uniform PusConstant {
 };
 
 void main() {
-    uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = unpackVertex(vertices[vertexIndex]);
+    DrawData d = drawData[drawIndex];
+
+    vec3 inPos = loadPosition(d.positionOffset, gl_VertexIndex);
 
     Transform transform = transforms[drawIndex];
-    vec3 pos = applyTransform(vertex.pos.xyz, transform);
+    vec3 pos = applyTransform(inPos, transform);
 
     gl_Position = shadowMat * vec4(pos, 1.0);
 }

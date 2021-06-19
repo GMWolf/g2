@@ -1,7 +1,9 @@
 
 struct DrawData {
     uint baseIndex;
-    uint baseVertex;
+    uint positionOffset;
+    uint normalOffset;
+    uint texcoordOffset;
     uint materialIndex;
 };
 

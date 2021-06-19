@@ -19,14 +19,10 @@
 
 namespace g2::gfx {
 
-struct MeshFormat {
-  size_t vertexByteSize;  // Size in bytes of vertex data, including padding
-  VkIndexType indexType;
-};
-
 struct Primitive {
-  MeshFormat meshFormat;
-  size_t baseVertex;  // Offset into mesh buffer in vertices
+  size_t positionOffset;
+  size_t normalOffset;
+  size_t texcoordOffset;
   size_t vertexCount;
   size_t baseIndex;
   size_t indexCount;
@@ -45,7 +41,7 @@ struct MeshBuffer {
 
 void initMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
 void destroyMeshBuffer(VmaAllocator allocator, MeshBuffer* meshBuffer);
-Primitive addMeshPrimitive(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, MeshFormat* meshFormat, void* vertexData, size_t vertexCount, void* indexData, size_t indexCount);
+
 
 Mesh addMesh(UploadQueue* uploadQueue, MeshBuffer* meshBuffer, const MeshData* meshData);
 

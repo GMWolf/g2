@@ -1,14 +1,6 @@
 #version 450
 
-struct DrawData {
-    uint baseIndex;
-    uint baseVertex;
-    uint materialIndex;
-};
-
-layout(set = 1, binding = 1) buffer DrawDataBlock {
-    DrawData drawData[];
-};
+#include "drawData.glsl"
 
 layout(set = 0, binding = 5) uniform usampler2D visbuffer;
 

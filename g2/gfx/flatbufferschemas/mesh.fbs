@@ -4,9 +4,10 @@ namespace g2.gfx;
 
 table MeshPrimitive {
     indices: [uint32];
-    vertexData: [ubyte];
+    positionData: [ubyte];
+    normalData: [ubyte];
+    texcoordData: [ubyte];
     vertexCount: uint32;
-    vertexAlignment: ubyte;
     material: string;
 }
 

@@ -10,6 +10,7 @@
 #include "scene.glsl"
 #include "transform.glsl"
 #include "geometry.glsl"
+#include "drawData.glsl"
 
 layout(location = 0) in vec2 screenPos;
 
@@ -33,15 +34,6 @@ layout(set = 0, binding = 3) buffer MaterialDataBuffer {
     MaterialData materials[];
 };
 
-struct DrawData {
-    uint baseIndex;
-    uint baseVertex;
-    uint materialIndex;
-};
-
-layout(set = 1, binding = 1) buffer DrawDataBlock {
-    DrawData drawData[];
-};
 
 layout( push_constant ) uniform PusConstant {
     uint matId;
@@ -157,19 +149,19 @@ void main() {
 
     MaterialData material = materials[matId];
 
-    uint index0 = (triId * 3 + 0) + draw.baseIndex;
-    uint index1 = (triId * 3 + 1) + draw.baseIndex;
-    uint index2 = (triId * 3 + 2) + draw.baseIndex;
+    uint index0 = indices[(triId * 3 + 0) + draw.baseIndex];
+    uint index1 = indices[(triId * 3 + 1) + draw.baseIndex];
+    uint index2 = indices[(triId * 3 + 2) + draw.baseIndex];
 
-    Vertex vertex0 = unpackVertex(vertices[indices[index0] + draw.baseVertex]);
-    Vertex vertex1 = unpackVertex(vertices[indices[index1] + draw.baseVertex]);
-    Vertex vertex2 = unpackVertex(vertices[indices[index2] + draw.baseVertex]);
+    vec3 inPos0 = loadPosition(draw.positionOffset, index0);
+    vec3 inPos1 = loadPosition(draw.positionOffset, index1);
+    vec3 inPos2 = loadPosition(draw.positionOffset, index2);
 
     Transform transform = transforms[drawIndex];
 
-    vec3 v0pos = applyTransform(vertex0.pos.xyz, transform);
-    vec3 v1pos = applyTransform(vertex1.pos.xyz, transform);
-    vec3 v2pos = applyTransform(vertex2.pos.xyz, transform);
+    vec3 v0pos = applyTransform(inPos0, transform);
+    vec3 v1pos = applyTransform(inPos1, transform);
+    vec3 v2pos = applyTransform(inPos2, transform);
 
     vec4 pos0 = viewProj * vec4(v0pos, 1.0);
     vec4 pos1 = viewProj * vec4(v1pos, 1.0);
@@ -195,15 +187,23 @@ void main() {
 
     vec3 viewDir = viewPos - position;
 
-    vec3 normal0 = rotate(vertex0.normal.xyz, transform.orientation) * invw[0];
-    vec3 normal1 = rotate(vertex1.normal.xyz, transform.orientation) * invw[1];
-    vec3 normal2 = rotate(vertex2.normal.xyz, transform.orientation) * invw[2];
+    vec3 inNormal0 = loadNormal(draw.normalOffset, index0);
+    vec3 inNormal1 = loadNormal(draw.normalOffset, index1);
+    vec3 inNormal2 = loadNormal(draw.normalOffset, index2);
+
+    vec3 normal0 = rotate(inNormal0, transform.orientation) * invw[0];
+    vec3 normal1 = rotate(inNormal1, transform.orientation) * invw[1];
+    vec3 normal2 = rotate(inNormal2, transform.orientation) * invw[2];
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
-    vec2 uv0 = vertex0.texcoords.xy * invw[0];
-    vec2 uv1 = vertex1.texcoords.xy * invw[1];
-    vec2 uv2 = vertex2.texcoords.xy * invw[2];
+    vec2 inUv0 = loadTexcoord(draw.texcoordOffset, index0);
+    vec2 inUv1 = loadTexcoord(draw.texcoordOffset, index1);
+    vec2 inUv2 = loadTexcoord(draw.texcoordOffset, index2);
+
+    vec2 uv0 = inUv0 * invw[0];
+    vec2 uv1 = inUv1 * invw[1];
+    vec2 uv2 = inUv2 * invw[2];
 
     GradientInterpolationResults uvInterpolation = interpolateAttributeWithGradient(mat3x2(uv0, uv1, uv2), derivatives.db_dx, derivatives.db_dy, d, 2.0f / vec2(textureSize(visbuffer, 0)));
 

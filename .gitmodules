@@ -46,3 +46,6 @@
 [submodule "thirdparty/zstd"]
 	path = thirdparty/zstd
 	url = git@github.com:facebook/zstd.git
+[submodule "thirdparty/meshoptimizer"]
+	path = thirdparty/meshoptimizer
+	url = https://github.com/zeux/meshoptimizer.git

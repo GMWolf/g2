@@ -20,17 +20,20 @@ layout(location = 3) out vec3 worldPos;
 layout(location = 4) out vec4 shadowCoord;
 
 void main() {
-    uint vertexIndex = gl_VertexIndex + drawData[drawIndex].baseVertex;
-    Vertex vertex = unpackVertex(vertices[vertexIndex]);
+    DrawData d = drawData[drawIndex];
+
+    vec3 inPos = loadPosition(d.positionOffset, gl_VertexIndex);
+    vec3 inNormal = loadNormal(d.normalOffset, gl_VertexIndex);
+    vec2 inTexcoord = loadTexcoord(d.texcoordOffset, gl_VertexIndex);
 
     Transform transform = transforms[drawIndex];
 
-    vec3 pos = applyTransform(vertex.pos.xyz, transform);
+    vec3 pos = applyTransform(inPos, transform);
     worldPos = pos;
 
     gl_Position = viewProj * vec4(pos, 1.0);
-    uv = vertex.texcoords.xy;
-    normal = rotate(vertex.normal.rgb, transform.orientation);
+    uv = inTexcoord;
+    normal = rotate(inNormal, transform.orientation);
     viewDir = viewPos - pos;
 
     shadowCoord = (shadowMat * vec4(pos + normal * 0.1, 1.0));
