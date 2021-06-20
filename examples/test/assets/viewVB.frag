@@ -1,5 +1,7 @@
 #version 450
 
+#include "drawData.glsl"
+
 layout(set = 0, binding = 5) uniform usampler2D visbuffer;
 
 layout(location = 0) in vec2 screenPos;
@@ -28,10 +30,10 @@ void main() {
 
     uint v = texelFetch(visbuffer, ivec2( gl_FragCoord.xy), 0).r;
 
-    uint drawId = v >> 23;
-    uint triId = v & 0x007FFFFFu;
+    uint drawId = v >> 7;
+    uint triId = v & 0x7Fu;
 
-    vec3 c = hsv2rgb(vec3(random(vec2(triId, 1.0)), 1.0, 1.0));
+    vec3 c = hsv2rgb(vec3(random(vec2(drawId, 1.0)), 0.5 + 0.5 * random(vec2(triId, 1.0)), 1.0));
 
     outColor = vec4(c, 1.0);
 }

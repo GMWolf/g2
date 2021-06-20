@@ -1,13 +1,26 @@
+include "vec.fbs";
 file_extension "g2mesh";
 
 namespace g2.gfx;
+
+
+struct MeshletData {
+    center: Vec3;
+    radius: float;
+    coneApex: Vec3;
+    coneAxis: Vec3;
+    coneCutoff: float;
+    triangleOffset: uint32;
+    triangleCount: uint32;
+    vertexOffset: uint32;
+}
 
 table MeshPrimitive {
     indices: [uint32];
     positionData: [ubyte];
     normalData: [ubyte];
     texcoordData: [ubyte];
-    vertexCount: uint32;
+    meshlets: [MeshletData];
     material: string;
 }
 

@@ -72,7 +72,6 @@ namespace g2::gfx {
         auto normalOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->normalData());
         auto texcoordOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->texcoordData());
 
-
         auto indexAlloc = allocateFromLinearBuffer(&meshBuffer->indexBuffer, primitive->indices()->size() * sizeof(uint32_t), 4);
         assert(indexAlloc.size);
         uploadQueue->addJob(UploadJob{
@@ -87,14 +86,26 @@ namespace g2::gfx {
                 },
         });
 
+        std::vector<Meshlet> meshlets(primitive->meshlets()->size());
+        for(int i = 0; i < primitive->meshlets()->size(); i++) {
+            auto m = primitive->meshlets()->Get(i);
+            meshlets[i].vertexOffset = m->vertexOffset();
+            meshlets[i].triangleCount =  m->triangleCount();
+            meshlets[i].triangleOffset = m->triangleOffset();
+            meshlets[i].center = {m->center().x(), m->center().y(), m->center().z()};
+            meshlets[i].radius = m->radius();
+            meshlets[i].coneApex = {m->coneApex().x(), m->coneApex().y(), m->coneApex().z()};
+            meshlets[i].coneAxis = {m->coneAxis().x(), m->coneAxis().y(), m->coneAxis().z()};
+            meshlets[i].coneCutoff = m->coneCutoff();
+        }
+
         Primitive prim {
                 .positionOffset = positionOffset / sizeof(uint32_t),
                 .normalOffset = normalOffset / sizeof(uint32_t),
                 .texcoordOffset = texcoordOffset / sizeof(uint32_t),
-                .vertexCount = primitive->vertexCount(),
                 .baseIndex = indexAlloc.offset / sizeof(uint32_t),
-                .indexCount = primitive->indices()->size(),
                 .material = 0,
+                .meshlets = std::move(meshlets),
         };
 
         return prim;

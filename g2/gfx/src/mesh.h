@@ -16,17 +16,29 @@
 #include <g2/assets/asset_registry.h>
 #include <vector>
 #include <g2/hat.h>
+#include <glm/vec3.hpp>
 
 namespace g2::gfx {
+
+struct Meshlet {
+    glm::vec3 center;
+    float radius;
+    glm::vec3 coneApex;
+    glm::vec3 coneAxis;
+    float coneCutoff;
+    uint32_t triangleOffset;
+    uint32_t triangleCount;
+    uint32_t vertexOffset;
+};
 
 struct Primitive {
   size_t positionOffset;
   size_t normalOffset;
   size_t texcoordOffset;
-  size_t vertexCount;
   size_t baseIndex;
-  size_t indexCount;
   uint32_t material;
+
+  std::vector<Meshlet> meshlets;
 };
 
 struct Mesh {

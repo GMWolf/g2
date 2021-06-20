@@ -19,6 +19,9 @@
       "format": "display"
     }
   ],
+  "depthAttachment" : {
+    "format": "d32_sfloat"
+  },
   "cullMode" : "none",
-  "depthCompare" : "less"
+  "depthCompare" : "always"
 }

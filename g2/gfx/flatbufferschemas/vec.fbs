@@ -1,0 +1,7 @@
+namespace g2.gfx;
+
+struct Vec3 {
+    x: float;
+    y: float;
+    z: float;
+}

@@ -152,9 +152,15 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
   descriptorIndexingFeatures.descriptorBindingPartiallyBound = true;
   descriptorIndexingFeatures.runtimeDescriptorArray = true;
 
+  VkPhysicalDeviceIndexTypeUint8FeaturesEXT indexTypeUint8FeaturesExt{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
+      .pNext = &descriptorIndexingFeatures,
+      .indexTypeUint8 = VK_TRUE,
+  };
+
   VkDeviceCreateInfo deviceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = &descriptorIndexingFeatures,
+      .pNext = &indexTypeUint8FeaturesExt,
       .queueCreateInfoCount = queueCount,
       .pQueueCreateInfos = queueCreateInfos,
       .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),

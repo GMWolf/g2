@@ -138,8 +138,8 @@ void main() {
 
     uint v = texelFetch(visbuffer, ivec2( gl_FragCoord.xy), 0).r;
 
-    uint drawIndex = v >> 23;
-    uint triId = v & 0x007FFFFFu;
+    uint drawIndex = v >> 7;
+    uint triId = v & 0x7Fu;
 
     DrawData draw = drawData[drawIndex];
 
@@ -241,4 +241,5 @@ void main() {
     vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
     outColor = vec4(col + ambient, 1.0);
+
 }

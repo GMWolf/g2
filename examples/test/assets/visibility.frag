@@ -39,7 +39,7 @@ layout( push_constant ) uniform PushConstant {
 };
 
 uint computeVB(uint drawId, uint primId) {
-    return ( drawId << 23 ) & 0x7F800000u | (primId & 0x007FFFFFu);
+    return ( drawId << 7u )  | (primId & 0x7Fu);
 }
 
 layout(location = 0) in vec2 uv;

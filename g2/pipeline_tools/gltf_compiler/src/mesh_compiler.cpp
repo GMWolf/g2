@@ -115,31 +115,70 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
         meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), positions.size());
 
 
-        std::vector<glm::vec3> packedPositions(positions.size());
-        std::transform(positions.begin(), positions.end(), packedPositions.begin(), [](glm::vec3 pos) {
-           //return glm::packHalf(glm::vec4(pos, 0));
-           return pos;
+
+        const size_t maxVertices = 64;
+        const size_t maxTriangles = 124;
+        float coneWeight = 0.5f;
+        size_t maxMeshlets = meshopt_buildMeshletsBound(indices.size(), maxVertices, maxTriangles);
+        std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
+
+        std::vector<uint32_t> meshletVertices(maxMeshlets * maxVertices);
+        std::vector<uint8_t> meshletTriangles(maxMeshlets * maxTriangles * 3);
+
+        size_t meshletCount = meshopt_buildMeshlets(meshlets.data(), meshletVertices.data(), meshletTriangles.data(),
+                                                    indices.data(), indices.size(), &positions[0].x, positions.size(), sizeof(glm::vec3), maxVertices, maxTriangles, coneWeight);
+        meshlets.resize(meshletCount);
+        meshletVertices.resize(meshlets.back().vertex_offset + meshlets.back().vertex_count);
+        meshletTriangles.resize(meshlets.back().triangle_offset + ((meshlets.back().triangle_count * 3 + 3) & ~3));
+
+        std::vector<uint32_t> packedIndices(meshletTriangles.size());
+        std::transform(meshletTriangles.begin(), meshletTriangles.end(), packedIndices.begin(), [](uint8_t index) {
+            return index;
         });
 
-        std::vector<glm::u8vec2> packedNormals(normals.size());
-        std::transform(normals.begin(), normals.end(), packedNormals.begin(), [](glm::vec3 normal) {
-            return glm::packSnorm<int8_t>(encode_oct(normal));
+        std::vector<glm::vec3> packedPositions(meshletVertices.size());
+        std::transform(meshletVertices.begin(), meshletVertices.end(), packedPositions.begin(), [&positions](uint32_t vertex) {
+            return positions[vertex];
+        } );
+
+        std::vector<glm::u8vec2> packedNormals(meshletVertices.size());
+        std::transform(meshletVertices.begin(), meshletVertices.end(), packedNormals.begin(), [&normals](uint32_t vertex) {
+            return glm::packSnorm<int8_t>(encode_oct(normals[vertex]));
         });
 
-        std::vector<glm::u16vec2> packedTexcoords(texcoords.size());
-        std::transform(texcoords.begin(), texcoords.end(), packedTexcoords.begin(), [](glm::vec2 texcoord) {
-            return glm::packHalf(texcoord);
+        std::vector<glm::u16vec2> packedTexcoords(meshletVertices.size());
+        std::transform(meshletVertices.begin(), meshletVertices.end(), packedTexcoords.begin(), [&texcoords](uint32_t vertex) {
+            return glm::packHalf(texcoords[vertex]);
         });
+
+        std::vector<g2::gfx::MeshletData> meshletDataVec;
+
+        for(auto meshlet : meshlets) {
+
+            meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletVertices[meshlet.vertex_offset], &meshletTriangles[meshlet.triangle_offset],
+                                                                 meshlet.triangle_count, &positions[0].x, positions.size(), sizeof(glm::vec3));
+
+            meshletDataVec.push_back(g2::gfx::MeshletData(
+                    g2::gfx::Vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
+                    bounds.radius,
+                    g2::gfx::Vec3(bounds.cone_apex[0], bounds.cone_apex[1], bounds.cone_apex[2]),
+                    g2::gfx::Vec3(bounds.cone_axis[0], bounds.cone_axis[1], bounds.cone_axis[2]),
+                    bounds.cone_cutoff,
+                    meshlet.triangle_offset, meshlet.triangle_count, meshlet.vertex_offset));
+        }
+
 
         auto fbPositions = createByteVector(fbb, packedPositions);
         auto fbNormals = createByteVector(fbb, packedNormals);
         auto fbTexcoords = createByteVector(fbb, packedTexcoords);
 
+        auto fbMeshlets = fbb.CreateVectorOfStructs(meshletDataVec);
+
         auto fbMaterialName = fbb.CreateString(std::string(primitive.material->name) + ".g2mat");
 
-        auto fbIndices = fbb.CreateVector(indices);
+        auto fbIndices = fbb.CreateVector(packedIndices);
 
-        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, packedPositions.size(), fbMaterialName));
+        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, fbMeshlets, fbMaterialName));
     }
 
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);

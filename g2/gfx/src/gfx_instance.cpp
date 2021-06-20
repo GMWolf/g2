@@ -26,6 +26,7 @@
 #include "material.h"
 #include <thread>
 #include "effect.h"
+#include "culling.h"
 
 #define SHADOWMAP_SIZE  2048
 
@@ -676,7 +677,10 @@ namespace g2::gfx {
 
         auto view = camera.inverse().matrix();
         float zfar = 75;
-        auto proj = glm::perspective(glm::radians(60.0f), pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height, 0.1f, zfar);
+        float znear = 0.1f;
+        float fov = glm::radians(60.0f);
+        float aspect = pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height;
+        auto proj = glm::perspective( fov, aspect, znear, zfar);
 
         glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::normalize(glm::vec3(-0.75, -3, 0.35)));
         //shadowMat  = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 100.0f) * glm::lookAt(glm::vec3(0, -4, 0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
@@ -812,25 +816,34 @@ namespace g2::gfx {
 
                     uint32_t drawIndex = 0;
                     uint32_t itemIndex = 0;
+
+                    auto cc = buildCameraCullData(camera, fov, aspect, znear, zfar);
+
                     for (DrawItem &item : drawItems) {
                         Mesh mesh = pImpl->meshManager.meshes[item.mesh];
                         for (Primitive &prim : mesh.primitives) {
 
-                            pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
+                            for(Meshlet& meshlet : prim.meshlets) {
+                                if (!meshletInView(cc, meshlet, transforms[itemIndex]))
+                                    continue;
 
-                            drawData[drawIndex] = {
-                                    .baseIndex = static_cast<uint32_t>(prim.baseIndex),
-                                    .positionOffset = static_cast<uint32_t>(prim.positionOffset),
-                                    .normalOffset = static_cast<uint32_t>(prim.normalOffset),
-                                    .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset),
-                                    .materialId = prim.material,
-                            };
+                                assert(drawIndex < pImpl->maxDrawCount);
+                                pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
 
-                            vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
-                                               sizeof(uint32_t), &drawIndex);
-                            vkCmdDrawIndexed(cmd, prim.indexCount, 1, prim.baseIndex, 0, 0);
+                                drawData[drawIndex] = {
+                                        .baseIndex = static_cast<uint32_t>(prim.baseIndex + meshlet.triangleOffset),
+                                        .positionOffset = static_cast<uint32_t>(prim.positionOffset + meshlet.vertexOffset * 3),
+                                        .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset / 2),
+                                        .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset + meshlet.vertexOffset),
+                                        .materialId = prim.material,
+                                };
 
-                            drawIndex++;
+                                vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
+                                                   sizeof(uint32_t), &drawIndex);
+                                vkCmdDrawIndexed(cmd, meshlet.triangleCount * 3, 1, prim.baseIndex + meshlet.triangleOffset, 0, 0);
+
+                                drawIndex++;
+                            }
                         }
                         itemIndex++;
                     }

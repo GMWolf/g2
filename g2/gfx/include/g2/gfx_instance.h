@@ -51,12 +51,15 @@ struct Transform {
         return mat;
     }
 
+    inline glm::vec3 apply(const glm::vec3& p) const {
+        return (orientation * p) * scale + pos;
+    }
+
     inline Transform inverse() const {
-        //TODO scale
         Transform result;
-        result.pos = glm::inverse(orientation) * -pos;
+        result.pos = glm::inverse(orientation) * ((-pos) / scale);
         result.orientation = glm::inverse(orientation);
-        result.scale = 1.0f;
+        result.scale = 1.0f / scale;
         return result;
     }
 };

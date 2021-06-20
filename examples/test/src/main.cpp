@@ -111,7 +111,7 @@ int main() {
                 },
                 {
                         .pos = {1, 0, 2},
-                        .scale = 2.0f,
+                        .scale = 1.0f,
                         .orientation = glm::quat(glm::vec3(0, 0, 0)),
                 },
                 {
