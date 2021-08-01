@@ -23,6 +23,11 @@ struct BlendAttachment {
     alpha_blend_op: BlendOp;
 }
 
+struct UniformBinding {
+    name: uint64;
+    binding: uint64;
+}
+
 table PipelineDef {
     modules: [ShaderModule];
     blending: [BlendAttachment];
@@ -32,4 +37,7 @@ table PipelineDef {
     depthCompare : CompareOp;
 }
 
-root_type PipelineDef;
+table ComputePipelineDef {
+    module: ShaderModule;
+    bindings: [UniformBinding];
+}

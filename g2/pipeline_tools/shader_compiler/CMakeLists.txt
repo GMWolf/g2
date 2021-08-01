@@ -1,7 +1,13 @@
-add_executable(g2_shader_compiler src/main.cpp)
+add_executable(g2_shader_compiler src/main.cpp src/module.h src/module.cpp src/reflection.h src/reflection.cpp)
 
 
-target_link_libraries(g2_shader_compiler PRIVATE shaderc spirv-cross-cpp flatbuffers g2_gfx_fbs rapidjson g2_util)
+target_link_libraries(g2_shader_compiler PRIVATE
+        shaderc
+        spirv-cross-cpp
+        flatbuffers
+        g2_gfx_fbs
+        rapidjson
+        g2_util)
 
 
 function(g2_add_pipeline input)

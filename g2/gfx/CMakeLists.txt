@@ -29,7 +29,7 @@ add_library(g2_gfx
         src/upload.cpp
         src/upload.h
         src/material.cpp
-        src/material.h src/effect.cpp src/effect.h src/forward_render_graph.h src/vb_render_graph.h src/culling.h)
+        src/material.h src/effect.cpp src/effect.h src/forward_render_graph.h src/vb_render_graph.h src/culling.h src/rendergraph_builder.h)
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp

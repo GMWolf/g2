@@ -6,150 +6,94 @@
 #define G2_VB_RENDER_GRAPH_H
 
 #include "renderpass.h"
-
+#include "rendergraph_builder.h"
 
 
 namespace g2::gfx {
-
     static RenderGraph *createRenderGraph_vb(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews,
-                                                  uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
+                                             uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
-        ImageInfo images[] = {
-                {
-                        // depth
-                        .size = {displayWidth, displayHeight},
-                        .format = VK_FORMAT_D32_SFLOAT,
-                },
-                {
-                        // shadow
-                        .size = {SHADOWMAP_SIZE, SHADOWMAP_SIZE},
-                        .format = VK_FORMAT_D32_SFLOAT,
-                        .binding = 4,
-                },
-                {
-                    // prim id
-                    .size = { displayWidth, displayHeight },
-                    .format = VK_FORMAT_R32_UINT,
-                    .binding = 5,
-                },
-                {
-                    // mat id
-                    .size = { displayWidth, displayHeight },
-                    .format = VK_FORMAT_D32_SFLOAT,
-                }
-        };
+        RendergraphBuilder graph;
 
 
+        uint32_t shadowImage = graph.addImage({
+            .size = {SHADOWMAP_SIZE, SHADOWMAP_SIZE},
+            .format = VK_FORMAT_D32_SFLOAT,
+            .binding = 4,
+            });
 
-        AttachmentInfo shadowAttachment = {
-                .image = 1,
+        graph.pass("shadow")
+            .depth({
+                .image = shadowImage,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .clearValue = {
-                        .depthStencil = {1.0f, 0},
-                }
-        };
-
-        ImageInputInfo imageInputs[] = {
-                {
-                        .image = 1,
-                        .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .depthStencil = { 1.0f, 0},
                 },
-                {
-                    .image = 2,
-                    .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                }
-        };
+            });
 
-        AttachmentInfo visPassColorAttachments[] = {
-                {
-                        .image = 2,
-                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                        .clearValue = {
-                                .color = {0.0f, 0.0f, 0.0f, 1.0f},
-                        },
-                }
-        };
+        uint32_t primitiveIdImage = graph.addImage({
+            .size = {displayWidth, displayHeight},
+            .format = VK_FORMAT_R32_UINT,
+            .binding = 5,
+            });
 
-        AttachmentInfo depthAttachment = {
-                .image = 0,
+        uint32_t depthImage = graph.addImage({
+            .size = {displayWidth, displayHeight},
+            .format = VK_FORMAT_D32_SFLOAT,
+            });
+
+        graph.pass("visibility")
+            .color({
+                .image = primitiveIdImage,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = {
+                        .color = {0.0f, 0.0f, 0.0f, 1.0f},
+                },
+            })
+            .depth({
+                .image = depthImage,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                 .clearValue = {
                         .depthStencil = {1.0f, 0},
-                }
-        };
-
-        AttachmentInfo displayAttachments[] = {
-                {   // Display attachment
-                        .image = UINT32_MAX,
-                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                        .clearValue = {
-                                .color = {0.0f, 0.0f, 0.0f, 1.0f},
-                        },
                 },
-        };
+            });
 
-        AttachmentInfo materialDepthWriteAttachment {
-            .image = 3,
+        uint32_t materialIdImage = graph.addImage({
+            .size = {displayWidth, displayHeight},
+            .format = VK_FORMAT_D32_SFLOAT,
+            });
+
+        graph.pass("materialDepth")
+            .depth({
+                .image = materialIdImage,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = {
+                        .depthStencil{0.0f, 0},
+                },
+            })
+            .imageRead(primitiveIdImage);
+
+        graph.pass("visibility_debug")
+        .color({
+            .image = UINT32_MAX,
             .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue = {
-                    .depthStencil = {0.0f, 0},
-            }
-        };
-
-        AttachmentInfo materialDepthReadAttachment {
-            .image = 3,
+        })
+        .depth({
+            .image = materialIdImage,
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        };
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        })
+        .imageRead(shadowImage)
+        .imageRead(primitiveIdImage);
 
-        ImageInputInfo materialDepthInput[] = {
-                {.image = 2, .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
-        };
-
-        RenderPassInfo renderPasses[] = {
-                {
-                        .name = "shadow",
-                        .colorAttachments = {},
-                        .depthAttachment = shadowAttachment,
-                        .imageInputs = {},
-                },
-                {
-                        .name = "visibility",
-                        .colorAttachments = visPassColorAttachments,
-                        .depthAttachment = depthAttachment,
-                        .imageInputs = {},
-                },
-                {
-                    .name = "materialDepth",
-                    .colorAttachments = {},
-                    .depthAttachment = materialDepthWriteAttachment,
-                    .imageInputs = materialDepthInput,
-                },
-                {
-                    .name = "visibility_debug",
-                    .colorAttachments = displayAttachments,
-                    .depthAttachment = materialDepthReadAttachment,
-                    .imageInputs = imageInputs,
-                }
-        };
-
-
-        RenderGraphInfo renderGraphInfo{
-                .images = images,
-                .renderPasses = renderPasses,
-                .displayImages = displayViews,
-                .displayWidth = displayWidth,
-                .displayHeight = displayHeight,
-                .displayFormat = displayFormat,
-        };
-
-        return createRenderGraph(device, allocator, &renderGraphInfo);
+        return graph.build(device, allocator, displayViews, displayWidth, displayHeight, displayFormat);
     }
+
 }
 
 #endif //G2_VB_RENDER_GRAPH_H

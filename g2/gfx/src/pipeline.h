@@ -14,6 +14,7 @@ namespace g2::gfx {
 
     VkPipeline createPipeline(VkDevice device, const PipelineDef* pipelineDef, VkPipelineLayout pipelineLayout, VkFormat displayFormat);
 
+
     struct PipelineAssetManager : public IAssetManager {
 
         //TODO remove these members somehow

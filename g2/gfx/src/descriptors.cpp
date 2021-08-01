@@ -10,7 +10,6 @@ namespace g2::gfx {
 
     static const uint32_t imageDescriptorCount = 1024;
 
-
     static VkDescriptorSetLayoutBinding resourceDescriptorSetLayouts[]{
             // Vertex Data
             VkDescriptorSetLayoutBinding {
@@ -91,9 +90,6 @@ namespace g2::gfx {
             },
     };
 
-
-
-
     static VkDescriptorSetLayoutBinding sceneDescriptorSetLayouts[]{
         //Uniforms
         VkDescriptorSetLayoutBinding {
@@ -134,7 +130,7 @@ namespace g2::gfx {
 
 
 
-    static void createDescriptorSetLayout(VkDevice device, std::span<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout* descriptorSetLayout, std::span<VkDescriptorBindingFlags> bindingFlags) {
+    static VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device, std::span<VkDescriptorSetLayoutBinding> bindings, std::span<VkDescriptorBindingFlags> bindingFlags ) {
         VkDescriptorSetLayoutBindingFlagsCreateInfo flags {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
             .bindingCount = static_cast<uint32_t>(bindingFlags.size()),
@@ -148,15 +144,17 @@ namespace g2::gfx {
                 .pBindings = bindings.data(),
         };
 
-        vkCreateDescriptorSetLayout(device, &descriptorSetInfo, nullptr, descriptorSetLayout);
+        VkDescriptorSetLayout layout;
+        vkCreateDescriptorSetLayout(device, &descriptorSetInfo, nullptr, &layout);
+        return layout;
     }
 
 
     GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount) {
 
         GlobalDescriptors descriptors{};
-        createDescriptorSetLayout(device, resourceDescriptorSetLayouts, &descriptors.resourceDescriptorSetLayout, resourceDescriptorBindingFlags);
-        createDescriptorSetLayout(device, sceneDescriptorSetLayouts, &descriptors.sceneDescriptorSetLayout, sceneDescriptorBindingFlags);
+        descriptors.resourceDescriptorSetLayout = createDescriptorSetLayout(device, resourceDescriptorSetLayouts, resourceDescriptorBindingFlags);
+        descriptors.sceneDescriptorSetLayout = createDescriptorSetLayout(device, sceneDescriptorSetLayouts, sceneDescriptorBindingFlags);
 
         { // create pipeline
             VkDescriptorSetLayout layouts[] = {
@@ -234,6 +232,80 @@ namespace g2::gfx {
         }
 
         return descriptors;
+    }
+
+    static VkDescriptorPool createPool(VkDevice device, const DescriptorsInfo* descriptors) {
+
+        uint32_t maxDescriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+
+        VkDescriptorPoolSize poolSizes[maxDescriptorType + 1];
+
+        for(uint32_t descriptorType = 0; descriptorType <= maxDescriptorType; descriptorType++)
+        {
+            poolSizes[descriptorType].type = static_cast<VkDescriptorType>(descriptorType);
+            poolSizes[descriptorType].descriptorCount = 0;
+        }
+
+        for(auto set : descriptors->setInfos) {
+            for(auto binding : set.bindings) {
+                poolSizes[binding.descriptorType].descriptorCount += binding.descriptorCount;
+            }
+        }
+
+        VkDescriptorPoolCreateInfo poolInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = static_cast<uint32_t>(descriptors->setInfos.size()),
+            .poolSizeCount = maxDescriptorType + 1,
+            .pPoolSizes = poolSizes,
+        };
+
+        VkDescriptorPool pool;
+        vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool);
+        return pool;
+    }
+
+
+    Descriptors createDescriptors(VkDevice device, const DescriptorsInfo *descriptorsInfo) {
+
+        VkDescriptorPool pool = createPool(device, descriptorsInfo);
+
+        std::vector<VkDescriptorSetLayout> layouts;
+        layouts.reserve(descriptorsInfo->setInfos.size());
+
+
+        std::vector<VkDescriptorSetLayout> allocLayouts;
+
+        for(auto set : descriptorsInfo->setInfos) {
+            layouts.push_back(createDescriptorSetLayout(device, set.bindings, set.bindingFlags));
+            for(uint32_t i = 0; i < set.count; i++) {
+                allocLayouts.push_back(layouts.back());
+            }
+        }
+
+        std::vector<VkDescriptorSet> descriptorSets(allocLayouts.size());
+        VkDescriptorSetAllocateInfo allocateInfo {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = pool,
+            .descriptorSetCount = static_cast<uint32_t>(allocLayouts.size()),
+            .pSetLayouts = allocLayouts.data(),
+        };
+        vkAllocateDescriptorSets(device, &allocateInfo, descriptorSets.data());
+
+        std::vector<uint32_t> descriptorSetOffsets;
+        descriptorSetOffsets.reserve(descriptorsInfo->setInfos.size());
+
+        uint32_t offset = 0;
+        for(auto set :descriptorsInfo->setInfos) {
+            descriptorSetOffsets.push_back(offset);
+            offset += set.count;
+        }
+
+        return Descriptors {
+            .pool = pool,
+            .layouts = std::move(layouts),
+            .descriptorSets = std::move(descriptorSets),
+            .descriptorSetOffsets = std::move(descriptorSetOffsets),
+        };
     }
 
 

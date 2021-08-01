@@ -12,7 +12,6 @@
 #include <vk_mem_alloc.h>
 
 namespace g2::gfx {
-    VkRenderPass createRenderPass(VkDevice device, VkFormat imageFormat);
 
     VkRenderPass createCompatibilityRenderPass(VkDevice device, std::span<VkFormat> imageFormats, VkFormat depthFornat);
 

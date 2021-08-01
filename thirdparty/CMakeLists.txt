@@ -8,8 +8,6 @@ add_subdirectory(glfw)
 
 add_subdirectory(glm)
 
-#add_subdirectory(volk)
-
 add_library(vma INTERFACE)
 target_include_directories(vma INTERFACE VulkanMemoryAllocator/include)
 

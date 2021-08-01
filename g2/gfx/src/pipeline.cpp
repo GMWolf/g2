@@ -201,7 +201,7 @@ VkPipeline g2::gfx::createPipeline(VkDevice device, const PipelineDef *pipeline_
 }
 
 g2::AssetAddResult g2::gfx::PipelineAssetManager::add_asset(std::span<const char> data) {
-    auto pipelineDef = g2::gfx::GetPipelineDef(data.data());
+    auto pipelineDef = flatbuffers::GetRoot<PipelineDef>(data.data());
 
     pipelines.push_back(createPipeline(device, pipelineDef, layout, displayFormat));
 

@@ -50,6 +50,7 @@ enum ShaderStage : byte {
     undefined = 0,
     vertex = 0x00000001,
     fragment = 0x00000010,
+    compute = 0x00000020,
 }
 
 // VkCullModeFlagBits

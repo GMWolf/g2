@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <span>
 
 namespace g2::gfx {
 
@@ -33,9 +34,27 @@ struct GlobalDescriptors {
     std::vector<VkDescriptorSet> sceneDescriptorSets;
 };
 
-
-
 GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount);
+
+struct DescriptorSetInfo {
+    std::span<VkDescriptorSetLayoutBinding> bindings;
+    std::span<VkDescriptorBindingFlags> bindingFlags;
+    uint32_t count;
+};
+
+struct DescriptorsInfo {
+    std::span<DescriptorSetInfo> setInfos;
+};
+
+struct Descriptors {
+    VkDescriptorPool pool;
+    std::vector<VkDescriptorSetLayout> layouts;
+    std::vector<VkDescriptorSet> descriptorSets;
+    std::vector<uint32_t> descriptorSetOffsets;
+};
+
+Descriptors createDescriptors(VkDevice device, const DescriptorsInfo* descriptorsInfo);
+
 
 }
 
