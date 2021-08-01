@@ -35,7 +35,7 @@ layout(set = 0, binding = 3) buffer MaterialDataBuffer {
 };
 
 
-layout( push_constant ) uniform PusConstant {
+layout( push_constant ) uniform PushConstant {
     uint matId;
 };
 
@@ -47,11 +47,12 @@ layout(early_fragment_tests) in;
 
 layout(location = 0) out vec4 outColor;
 
-vec4 sampleImage(uint imageIndex, vec2 uv, vec4 def) {
+vec4 sampleImage(uint imageIndex, vec2 uv, vec4 def, vec2 uvdx, vec2 uvdy) {
     if (imageIndex == INVALID_IMAGE) {
         return def;
     } else {
-        return texture(textures[imageIndex], uv);
+        //return texture(textures[imageIndex], uv);
+        return textureGrad(textures[imageIndex], uv, uvdx, uvdy);
     }
 }
 
@@ -88,7 +89,7 @@ DerivativesOutput computePartialDerivatives(vec2 v[3])
 
 vec3 interpolateAttribute(mat3 attributes, vec3 db_dx, vec3 db_dy, vec2 d)
 {
-    vec3 attribute_x = attributes * db_dx;;
+    vec3 attribute_x = attributes * db_dx;
     vec3 attribute_y = attributes * db_dy;
     vec3 attribute_s = attributes[0];
 
@@ -133,10 +134,60 @@ float depthLinearization(float depth, float near, float far)
     return (2.0 * near) / (far + near - depth * (far - near));
 }
 
+
+struct BarycentricDeriv
+{
+    vec3 m_lambda;
+    vec3 m_ddx;
+    vec3 m_ddy;
+};
+
+
+BarycentricDeriv CalcFullBary(vec4 pt0, vec4 pt1, vec4 pt2, vec2 pixelNdc, vec2 winSize)
+{
+    BarycentricDeriv ret;
+
+    vec3 invW = 1.0 / (vec3(pt0.w, pt1.w, pt2.w));
+
+    vec2 ndc0 = pt0.xy * invW.x;
+    vec2 ndc1 = pt1.xy * invW.y;
+    vec2 ndc2 = pt2.xy * invW.z;
+
+    float invDet = 1.0 / determinant(mat2(ndc2 - ndc1, ndc0 - ndc1));
+    ret.m_ddx = vec3(ndc1.y - ndc2.y, ndc2.y - ndc0.y, ndc0.y - ndc1.y) * invDet;
+    ret.m_ddy = vec3(ndc2.x - ndc1.x, ndc0.x - ndc2.x, ndc1.x - ndc0.x) * invDet;
+
+    vec2 deltaVec = pixelNdc - ndc0;
+
+    float interpInvW = (invW.x + deltaVec.x * dot(invW, ret.m_ddx) + deltaVec.y * dot(invW, ret.m_ddy));
+    float interpW = 1.0 / interpInvW;
+
+    ret.m_lambda.x = interpW * (invW[0] + deltaVec.x * ret.m_ddx.x * invW[0] + deltaVec.y * ret.m_ddy.x * invW[0]);
+    ret.m_lambda.y = interpW * (0.0f    + deltaVec.x * ret.m_ddx.y * invW[1] + deltaVec.y * ret.m_ddy.y * invW[1]);
+    ret.m_lambda.z = interpW * (0.0f    + deltaVec.x * ret.m_ddx.z * invW[2] + deltaVec.y * ret.m_ddy.z * invW[2]);
+
+
+    ret.m_ddx *= (2.0f / winSize.x);
+    ret.m_ddy *= (2.0f / winSize.y);
+
+    ret.m_ddy *= -1.0f;
+
+    return ret;
+}
+
+vec3 InterpolateWithDeriv(BarycentricDeriv deriv, vec3 v)
+{
+    vec3 ret = vec3(0);
+
+    ret.x = dot(deriv.m_lambda, v);
+    ret.y = dot(deriv.m_ddx * v, vec3(1));
+    ret.z = dot(deriv.m_ddy * v, vec3(1));
+
+    return ret;
+}
+
 void main() {
-
-
-    uint v = texelFetch(visbuffer, ivec2( gl_FragCoord.xy), 0).r;
+    uint v = texelFetch(visbuffer, ivec2(gl_FragCoord.xy ), 0).r;
 
     uint drawIndex = v >> 7;
     uint triId = v & 0x7Fu;
@@ -166,6 +217,10 @@ void main() {
     vec4 pos0 = viewProj * vec4(v0pos, 1.0);
     vec4 pos1 = viewProj * vec4(v1pos, 1.0);
     vec4 pos2 = viewProj * vec4(v2pos, 1.0);
+
+
+    BarycentricDeriv baryDeriv = CalcFullBary(pos0, pos1, pos2, screenPos, 2 * vec2(textureSize(visbuffer, 0)));
+
 
     vec3 invw = 1.0f / vec3(pos0.w, pos1.w, pos2.w);
 
@@ -197,6 +252,10 @@ void main() {
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
+   //normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
+   //normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
+   //normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
+
     vec2 inUv0 = loadTexcoord(draw.texcoordOffset, index0);
     vec2 inUv1 = loadTexcoord(draw.texcoordOffset, index1);
     vec2 inUv2 = loadTexcoord(draw.texcoordOffset, index2);
@@ -208,20 +267,28 @@ void main() {
     GradientInterpolationResults uvInterpolation = interpolateAttributeWithGradient(mat3x2(uv0, uv1, uv2), derivatives.db_dx, derivatives.db_dy, d, 2.0f / vec2(textureSize(visbuffer, 0)));
 
     float linearZ = depthLinearization(z/w, 0.1, 75.0);
-    float mip = pow(pow(linearZ, 0.9) * 5.0, 1.5);
-
+    float mip = 1;// pow(pow(linearZ, 0.9) * 5.0, 1.5);
 
     vec2 uvdx = uvInterpolation.dx * w * mip;
     vec2 uvdy = uvInterpolation.dy * w * mip;
     vec2 uv = uvInterpolation.interp * w;
 
-    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0));
+    vec3 uvix = InterpolateWithDeriv(baryDeriv, vec3(inUv0.x, inUv1.x, inUv2.x));
+    vec3 uviy = InterpolateWithDeriv(baryDeriv, vec3(inUv0.y, inUv1.y, inUv2.y));
+
+    uv.x = uvix.x;
+    uv.y = uviy.x;
+
+    uvdx = uvix.yz;
+    uvdy = uviy.yz;
+
+    vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0), uvdx, uvdy);
 
     PBRFragment pbr;
     pbr.albedo = albedoAlpha.rgb;
-    pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(material.albedoMetallicFactor.a)).b;
-    pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(material.emissiveRoughnessFactor.a)).g;
-    pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(material.emissiveRoughnessFactor.rgb, 1)).rgb;
+    pbr.metalicity = sampleImage(material.metallicRoughness, uv, vec4(material.albedoMetallicFactor.a), uvdx, uvdy).b;
+    pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(material.emissiveRoughnessFactor.a), uvdx, uvdy).g;
+    pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(material.emissiveRoughnessFactor.rgb, 1), uvdx, uvdy).rgb;
 
     pbr.normal = normalize(normal);
     if (material.normal != INVALID_IMAGE) {
@@ -238,8 +305,8 @@ void main() {
     light.radiance = vec3(8.0 * shadowIntensity(shadowCoord));
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
-    vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1)).r;
+    vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1), uvdx, uvdy).r;
 
     outColor = vec4(col + ambient, 1.0);
-
+    //outColor = vec4(albedoAlpha.rgb, 1.0);
 }

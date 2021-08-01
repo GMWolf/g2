@@ -801,13 +801,12 @@ namespace g2::gfx {
                     vkCmdDraw(cmd, 3, 1, 0, 0);
                 }
 
-            } else if (strcmp(renderPassInfo.name, "materialDepth") == 0){
+            } else if (strcmp(renderPassInfo.name, "materialDepth") == 0) {
                 vkCmdDraw(cmd, 3, 1, 0, 0);
             } else {
 
                 vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-                //Do a draw now
                 if (!drawItems.empty()) {
 
                     memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());

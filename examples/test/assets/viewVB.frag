@@ -33,6 +33,8 @@ void main() {
     uint drawId = v >> 7;
     uint triId = v & 0x7Fu;
 
+    uint material = drawData[drawId].materialIndex;
+
     vec3 c = hsv2rgb(vec3(random(vec2(drawId, 1.0)), 0.5 + 0.5 * random(vec2(triId, 1.0)), 1.0));
 
     outColor = vec4(c, 1.0);
