@@ -187,8 +187,7 @@ vec3 InterpolateWithDeriv(BarycentricDeriv deriv, vec3 v)
 }
 
 void main() {
-    uint v = texelFetch(visbuffer, ivec2(gl_FragCoord.xy ), 0).r;
-
+    uint v = texelFetch(visbuffer, ivec2(gl_FragCoord.xy ), 0).r - 1;
     uint drawIndex = v >> 7;
     uint triId = v & 0x7Fu;
 

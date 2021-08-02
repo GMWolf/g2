@@ -46,10 +46,10 @@ namespace g2::gfx {
         graph.pass("visibility")
             .color({
                 .image = primitiveIdImage,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .clearValue = {
-                        .color = {0.0f, 0.0f, 0.0f, 1.0f},
+                        .color = {0.0f, 0.0f, 0.0f, 0.0f},
                 },
             })
             .depth({
@@ -69,10 +69,10 @@ namespace g2::gfx {
         graph.pass("materialDepth")
             .depth({
                 .image = materialIdImage,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .clearValue = {
-                        .depthStencil{0.0f, 0},
+                        .depthStencil{1.0f, 0},
                 },
             })
             .imageRead(primitiveIdImage);
@@ -80,8 +80,11 @@ namespace g2::gfx {
         graph.pass("visibility_debug")
         .color({
             .image = UINT32_MAX,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue = {
+                    .color = { 1.0f, 0.0f, 1.0f, 1.0f },
+             },
         })
         .depth({
             .image = materialIdImage,
