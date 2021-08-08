@@ -99,6 +99,8 @@ namespace g2::gfx {
             meshlets[i].coneCutoff = m->coneCutoff();
         }
 
+        assert(normalOffset % sizeof(uint32_t) == 0);
+
         Primitive prim {
                 .positionOffset = positionOffset / sizeof(uint32_t),
                 .normalOffset = normalOffset / sizeof(uint32_t),

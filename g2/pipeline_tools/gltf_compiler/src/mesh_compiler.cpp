@@ -24,21 +24,19 @@ struct Meshlet {
 };
 
 
+glm::vec2 sign_not_zero(glm::vec2 v)
+{
+    return glm::vec2((v.x >= 0 ? 1.0 : -1.0),
+                     (v.y >=0 ? 1.0 : -1.0));
+}
+
 glm::vec2 encode_oct(const glm::vec3& va) {
 
     glm::vec3 v = glm::normalize(va);
 
     glm::vec2 p = glm::vec2(v.x, v.y) * (1.0f / (std::abs(v.x) + std::abs(v.y) + std::abs(v.z)));
-    if (v.z <= 0.0) {
-        glm::vec2 snz {
-            p.x >= 0.0 ? 1.0 : -1.0,
-            p.y >= 0.0 ? 1.0 : -1.0,
-        };
 
-        return (glm::vec2(1.0) - glm::abs(glm::vec2(p.y, p.x))) * snz;
-    } else {
-        return p;
-    }
+    return v.z <= 0 ? ((glm::vec2(1.0) - glm::abs(glm::vec2(p.y, p.x))) * sign_not_zero(p)) : p;
 }
 
 
@@ -141,10 +139,12 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             return positions[vertex];
         } );
 
-        std::vector<glm::u8vec2> packedNormals(meshletVertices.size());
+        std::vector<glm::i16vec2> packedNormals(meshletVertices.size());
         std::transform(meshletVertices.begin(), meshletVertices.end(), packedNormals.begin(), [&normals](uint32_t vertex) {
-            return glm::packSnorm<int8_t>(encode_oct(normals[vertex]));
+            return glm::packSnorm<int16_t>(encode_oct(normals[vertex]));
         });
+
+
 
         std::vector<glm::u16vec2> packedTexcoords(meshletVertices.size());
         std::transform(meshletVertices.begin(), meshletVertices.end(), packedTexcoords.begin(), [&texcoords](uint32_t vertex) {

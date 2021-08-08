@@ -48,14 +48,15 @@ int main() {
     std::vector<g2::gfx::DrawItem> drawItems {
             {.mesh = mesh},
             {.mesh = mesh2},
-            {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
+            //{.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
+            {.mesh = assetRegistry.getAssetIndex("assets/bistro/untitled.gltf/Mesh.1282.g2mesh")},
     };
 
-    for(int x = 0; x < 20; x++) {
-        for(int y = 0; y < 10; y++) {
-            drawItems.push_back({.mesh = assetRegistry.getAssetIndex("assets/grass/grass.gltf/grass.g2mesh")});
-        }
-    }
+    //for(int x = 0; x < 20; x++) {
+    //    for(int y = 0; y < 10; y++) {
+    //        drawItems.push_back({.mesh = assetRegistry.getAssetIndex("assets/grass/grass.gltf/grass.g2mesh")});
+    //    }
+    //}
 
 
 
@@ -122,15 +123,15 @@ int main() {
         };
 
         
-        for(int x = 0; x < 20; x++) {
-            for(int y = 0; y < 10; y++) {
-                transforms.push_back({
-                    .pos = {x - 10,0,  y - 5},
-                    .scale = 0.02f,
-                    .orientation = glm::quat(),
-                });
-            }
-        }
+        //for(int x = 0; x < 20; x++) {
+        //    for(int y = 0; y < 10; y++) {
+        //        transforms.push_back({
+        //            .pos = {x - 10,0,  y - 5},
+        //            .scale = 0.02f,
+        //            .orientation = glm::quat(),
+        //        });
+        //    }
+        //}
 
         gfx.draw(drawItems, transforms, camera);
 

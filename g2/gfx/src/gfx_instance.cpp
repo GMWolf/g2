@@ -832,7 +832,7 @@ namespace g2::gfx {
                                 drawData[drawIndex] = {
                                         .baseIndex = static_cast<uint32_t>(prim.baseIndex + meshlet.triangleOffset),
                                         .positionOffset = static_cast<uint32_t>(prim.positionOffset + meshlet.vertexOffset * 3),
-                                        .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset / 2),
+                                        .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset),
                                         .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset + meshlet.vertexOffset),
                                         .materialId = prim.material,
                                 };

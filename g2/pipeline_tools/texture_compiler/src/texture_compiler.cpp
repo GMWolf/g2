@@ -79,7 +79,21 @@ int main(int argc, char* argv[]) {
     fs::path output = argv[2];
 
     int imageWidth, imageHeight, comp;
+
+    stbi_uc localImage[16];
+
+
     stbi_uc* imageData = stbi_load(input.c_str(), &imageWidth, &imageHeight, &comp, 4);
+
+    if (imageWidth == 1 && imageHeight == 1) {
+        for(int i = 0; i < 16; i++) {
+            localImage[i] = imageData[i % 4];
+        }
+        stbi_image_free(imageData);
+        imageData = localImage;
+        imageWidth = 4;
+        imageHeight = 4;
+    }
 
     ispc::bc7e_compress_block_init();
 
@@ -116,8 +130,12 @@ int main(int argc, char* argv[]) {
 
     auto packedImage = compressImageData(imageData, imageWidth, imageHeight, bc7e_params);
 
-    free(outImageData);
-    stbi_image_free(imageData);
+    if (outImageData != localImage) {
+        free(outImageData);
+    }
+    if (imageData != localImage) {
+        stbi_image_free(imageData);
+    }
 
 
     auto image = g2::gfx::CreateImageDefDirect(fbb, imageWidth, imageHeight, 1, numLevels, g2::gfx::Format::bc7_srgb, &mips); // TODO non srgb textures

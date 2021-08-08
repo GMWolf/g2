@@ -36,12 +36,7 @@ vec3 loadPosition(uint offset, uint index) {
 }
 
 vec3 loadNormal(uint offset, uint index) {
-    uint a = vertexData[offset + index / 2];
-    if ((index & 1) == 0) {
-        return oct_to_vec3(unpackSnorm4x8(a).xy);
-    } else {
-        return oct_to_vec3(unpackSnorm4x8(a).zw);
-    }
+    return oct_to_vec3(unpackSnorm2x16(vertexData[offset + index]));
 }
 
 vec2 loadTexcoord(uint offset, uint index) {

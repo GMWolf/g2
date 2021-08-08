@@ -251,9 +251,9 @@ void main() {
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
-   //normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
-   //normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
-   //normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
+    normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
+    normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
+    normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
 
     vec2 inUv0 = loadTexcoord(draw.texcoordOffset, index0);
     vec2 inUv1 = loadTexcoord(draw.texcoordOffset, index1);
