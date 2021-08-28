@@ -1,4 +1,4 @@
-add_library(g2_ecs include/g2/ecs/registry.h include/g2/ecs/type.h src/registry.cpp include/g2/ecs/query.h src/query.cpp)
+add_library(g2_ecs include/g2/ecs/registry.h include/g2/ecs/type.h src/registry.cpp include/g2/ecs/query.h src/query.cpp include/g2/ecs/view.h)
 
 target_include_directories(g2_ecs
         PUBLIC include

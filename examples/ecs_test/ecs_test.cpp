@@ -4,6 +4,8 @@
 
 #include <g2/ecs/registry.h>
 #include <iostream>
+#include <g2/ecs/query.h>
+#include <g2/ecs/view.h>
 
 using namespace g2::ecs;
 
@@ -33,15 +35,20 @@ int main() {
     };
 
 
+    Query q;
+    q.components = {pos, vel};
+
     for(int i = 0; i < 10; i++)
     {
-        Position& position = *registry.get<Position>(e, pos);
-        Velocity& velocity = *registry.get<Velocity>(e, vel);
+        for(Chunk& chunk : query(registry, q)) {
+            auto view = ChunkView<Position, Velocity>(chunk, pos, vel);
+            for(auto[position, velocity] : view) {
+                position.x += velocity.x;
+                position.y += velocity.y;
 
-        position.x += velocity.x;
-        position.y += velocity.y;
-
-        std::cout << "pos: " << position.x << " " << position.y << std::endl;
+                std::cout << "pos: " << position.x << " " << position.y << std::endl;
+            }
+        }
     }
 
 

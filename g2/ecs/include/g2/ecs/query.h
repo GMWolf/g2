@@ -25,16 +25,16 @@ namespace g2::ecs {
         std::vector<Archetype>::iterator archetypeEnd;
         std::vector<Chunk*>::iterator chunkIterator;
 
-        bool operator==(const QueryIterator& other) const {
+        inline bool operator==(const QueryIterator& other) const {
             return archetypeIterator == other.archetypeIterator
                 && chunkIterator == other.chunkIterator;
         }
 
-        bool operator!=(const QueryIterator& other) const {
+        inline bool operator!=(const QueryIterator& other) const {
             return !this->operator==(other);
         }
 
-        QueryIterator& operator++() {
+        inline QueryIterator& operator++() {
             chunkIterator++;
             if (chunkIterator == archetypeIterator->chunks.end()) {
                 do {
@@ -45,8 +45,53 @@ namespace g2::ecs {
             return *this;
         }
 
+        inline Chunk& operator*() const {
+            return **chunkIterator;
+        }
+
     };
 
+    struct QueryResult {
+        QueryIterator beginIterator;
+        QueryIterator endIterator;
+
+        QueryIterator begin() {
+            return beginIterator;
+        }
+
+        QueryIterator end() {
+            return endIterator;
+        }
+    };
+
+    QueryResult query(Registry& registry, const Query& query) {
+        QueryIterator begin;
+        begin.query = query;
+        begin.archetypeIterator = registry.archetypes.begin();
+        begin.archetypeEnd = registry.archetypes.end();
+
+        while(begin.archetypeIterator != begin.archetypeEnd && !queryMatch(query, begin.archetypeIterator->type)) {
+            begin.archetypeIterator++;
+        }
+
+        if (begin.archetypeIterator == begin.archetypeEnd) {
+            begin.chunkIterator = {};
+        } else {
+            begin.chunkIterator = begin.archetypeIterator->chunks.begin();
+        }
+
+        QueryIterator end;
+        end.query = query;
+        end.archetypeIterator = registry.archetypes.end();
+        end.archetypeEnd = registry.archetypes.end();
+        end.chunkIterator = {};
+
+        return {
+            .beginIterator = begin,
+            .endIterator = end
+        };
+
+    }
 
 
 }
