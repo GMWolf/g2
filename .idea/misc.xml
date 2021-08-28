@@ -11,6 +11,8 @@
       <file path="$PROJECT_DIR$/g2/assets/flatbufferschemas" />
       <file path="$PROJECT_DIR$/g2/assets/include" />
       <file path="$PROJECT_DIR$/g2/assets/src" />
+      <file path="$PROJECT_DIR$/g2/core/include" />
+      <file path="$PROJECT_DIR$/g2/core/src" />
       <file path="$PROJECT_DIR$/g2/ecs/include" />
       <file path="$PROJECT_DIR$/g2/ecs/src" />
       <file path="$PROJECT_DIR$/g2/gfx/flatbufferschemas" />
@@ -26,6 +28,8 @@
       <file path="$PROJECT_DIR$/g2/pipeline_tools/texture_compiler/src" />
       <file path="$PROJECT_DIR$/g2/platform/desktop" />
       <file path="$PROJECT_DIR$/g2/platform/include" />
+      <file path="$PROJECT_DIR$/g2/render/include" />
+      <file path="$PROJECT_DIR$/g2/render/src" />
       <file path="$PROJECT_DIR$/g2/util/include" />
       <file path="$PROJECT_DIR$/g2/util/src" />
     </sourceRoots>

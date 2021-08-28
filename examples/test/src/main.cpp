@@ -12,6 +12,10 @@
 #include <g2/gfx/material_generated.h>
 #include <g2/assets/asset_registry.h>
 #include <unistd.h>
+#include <g2/render/render.h>
+#include <g2/ecs/registry.h>
+#include <g2/core/core.h>
+#include "camera.h"
 
 int main() {
     g2::ApplicationConfiguration appConfig{
@@ -30,7 +34,6 @@ int main() {
     };
 
     g2::gfx::Instance gfx(gfxConfig);
-    
 
     g2::AssetRegistry assetRegistry;
 
@@ -40,32 +43,51 @@ int main() {
 
     assetRegistry.includePath("assets");
 
-    auto mesh = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/mesh_helmet_LP_13930damagedHelmet.g2mesh");
+    g2::ecs::Registry ecs;
 
-    auto mesh2 = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh");
+    g2::registerRenderComponents(ecs);
+    g2::registerCoreComponents(ecs);
 
-
-    std::vector<g2::gfx::DrawItem> drawItems {
-            {.mesh = mesh},
-            {.mesh = mesh2},
-            {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
-            {.mesh = assetRegistry.getAssetIndex("assets/bistro/untitled.gltf/Mesh.1282.g2mesh")},
+    g2::ecs::id_t helmet = ecs.create({g2::c_transform, g2::c_meshRender});
+    ecs.get<g2::Transform>(helmet, g2::c_transform) = {
+            .pos = {1, 1, -2},
+            .scale = 1.0f,
+            .orientation = glm::quat(glm::vec3(0, 0, 0))
+    };
+    ecs.get<g2::MeshRender>(helmet, g2::c_meshRender) = {
+            .meshIndex = assetRegistry.getAssetIndex("assets/DamagedHelmet/DamagedHelmet.gltf/mesh_helmet_LP_13930damagedHelmet.g2mesh")
     };
 
-    //for(int x = 0; x < 20; x++) {
-    //    for(int y = 0; y < 10; y++) {
-    //        drawItems.push_back({.mesh = assetRegistry.getAssetIndex("assets/grass/grass.gltf/grass.g2mesh")});
-    //    }
-    //}
+    g2::ecs::id_t flightHelmet = ecs.create({g2::c_transform, g2::c_meshRender});
+    ecs.get<g2::Transform>(flightHelmet, g2::c_transform) = {
+            .pos = {1, 0, 2},
+            .scale = 1.0f,
+            .orientation = glm::quat(glm::vec3(0, 0, 0)),
+    };
+    ecs.get<g2::MeshRender>(flightHelmet, g2::c_meshRender) = {
+            .meshIndex = assetRegistry.getAssetIndex("assets/FlightHelmet/FlightHelmet.gltf/LeatherParts_low.g2mesh")
+    };
+
+    g2::ecs::id_t sponza = ecs.create({g2::c_transform, g2::c_meshRender});
+    ecs.get<g2::Transform>(sponza, g2::c_transform) = {
+            .pos = {0,0,0},
+            .scale = 0.02f,
+            .orientation = glm::quat(),
+    };
+    ecs.get<g2::MeshRender>(sponza, g2::c_meshRender) = {
+            .meshIndex = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")
+    };
 
 
-
-    float r = 0;
-
-    g2::gfx::Transform camera{};
-    camera.pos = {0, 0, -1};
-    camera.scale = 1;
-    camera.orientation = glm::quatLookAt(glm::vec3(0, 0, -1), glm::vec3(0,-1,0));
+    g2::ecs::id_t camera = ecs.create({g2::c_transform, g2::c_camera, c_fpsController});
+    ecs.get<g2::Transform>(camera, g2::c_transform) = {
+            .pos = {0, 0, -1},
+            .scale = 1,
+            .orientation = glm::quatLookAt(glm::vec3(0, 0, -1), glm::vec3(0,-1,0)),
+    };
+    ecs.get<FPSController>(camera, c_fpsController) = {
+            .movSpd = 2.5
+    };
 
     double lastTime = app.getTime();
 
@@ -77,70 +99,10 @@ int main() {
         float dt = (float)time - lastTime;
         lastTime = time;
 
-        float movSpd = 2.5;
+        updateCameras(ecs, app.inputState, dt);
 
-        if (app.inputState.keyDown(g2::KEYS::W)) {
-            camera.pos += camera.orientation * glm::vec3(0,0,-1) * dt * movSpd;
-        }
-        if (app.inputState.keyDown(g2::KEYS::S)) {
-            camera.pos += camera.orientation * glm::vec3(0,0,1) * dt * movSpd;
-        }
-        if (app.inputState.keyDown(g2::KEYS::A)) {
-            camera.pos += camera.orientation * glm::vec3(-1, 0, 0) * dt * movSpd;
-        }
-        if (app.inputState.keyDown(g2::KEYS::D)) {
-            camera.pos += camera.orientation * glm::vec3(1, 0, 0) * dt * movSpd;
-        }
-        if (app.inputState.keyDown(g2::KEYS::E)) {
-            camera.orientation *= glm::quat(glm::vec3(0, -1, 0) * dt);
-        }
-        if (app.inputState.keyDown(g2::KEYS::Q)) {
-            camera.orientation *= glm::quat(glm::vec3(0, 1, 0) * dt);
-        }
-        if (app.inputState.keyDown(g2::KEYS::SPACE)) {
-            camera.pos += camera.orientation * glm::vec3(0, -1, 0) * dt * movSpd;
-        }
-        if (app.inputState.keyDown(g2::KEYS::LEFT_CONTROL)) {
-            camera.pos += camera.orientation * glm::vec3(0, 1, 0) * dt * movSpd;
-        }
+        g2::render(gfx, ecs);
 
-        std::vector<g2::gfx::Transform> transforms{
-                {
-                        .pos = {1, 1, -2},
-                        .scale = 1.0f,
-                        .orientation = glm::quat(glm::vec3(0, r, 0)),
-                },
-                {
-                        .pos = {1, 0, 2},
-                        .scale = 1.0f,
-                        .orientation = glm::quat(glm::vec3(0, 0, 0)),
-                },
-                {
-                    .pos = {0,0,0},
-                    .scale = 0.02f,
-                    .orientation = glm::quat(),
-                },
-                {
-                        .pos = {0,0,0},
-                        .scale = 0.02f,
-                        .orientation = glm::quat(),
-                }
-        };
-
-        
-        //for(int x = 0; x < 20; x++) {
-        //    for(int y = 0; y < 10; y++) {
-        //        transforms.push_back({
-        //            .pos = {x - 10,0,  y - 5},
-        //            .scale = 0.02f,
-        //            .orientation = glm::quat(),
-        //        });
-        //    }
-        //}
-
-        gfx.draw(drawItems, transforms, camera);
-
-        r += 0.0001;
     }
 
 }

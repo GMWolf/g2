@@ -39,8 +39,8 @@ namespace g2::ecs {
         void* get(id_t entity, id_t component, size_t size);
 
         template<class T>
-        T* get(id_t entity, id_t component) {
-            return static_cast<T*>(get(entity, component, sizeof(T)));
+        T& get(id_t entity, id_t component) {
+            return *static_cast<T*>(get(entity, component, sizeof(T)));
         }
 
         template<class T>

@@ -25,21 +25,19 @@ int main() {
     auto vel = registry.registerComponent<Velocity>();
 
     auto e = registry.create({pos, vel});
-    *registry.get<Position>(e, pos) = {
+    registry.get<Position>(e, pos) = {
             .x = 0,
             .y = 0,
     };
-    *registry.get<Velocity>(e, vel) = {
+    registry.get<Velocity>(e, vel) = {
             .x = 1,
             .y = 2,
     };
 
-
     Query q;
     q.components = {pos, vel};
 
-    for(int i = 0; i < 10; i++)
-    {
+    for(int i = 0; i < 10; i++) {
         for(Chunk& chunk : query(registry, q)) {
             auto view = ChunkView<Position, Velocity>(chunk, pos, vel);
             for(auto[position, velocity] : view) {
@@ -50,7 +48,6 @@ int main() {
             }
         }
     }
-
 
     return 0;
 }

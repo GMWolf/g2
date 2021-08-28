@@ -16,6 +16,8 @@
 #include <g2/assets/asset_registry.h>
 #include <glm/gtx/quaternion.hpp>
 
+#include <g2/core/Transform.h>
+
 struct VkPipeline_T;
 typedef VkPipeline_T* VkPipeline;
 
@@ -33,35 +35,6 @@ struct MeshData;
 
 struct DrawItem {
     uint32_t mesh;
-};
-
-struct Transform {
-    glm::vec3 pos;
-    float scale;
-    glm::quat orientation;
-
-    inline glm::mat4 matrix() const {
-        //TODO: scale
-        auto r = glm::toMat3(orientation);
-        glm::mat4 mat;
-        mat[0] = glm::vec4(r[0], 0);
-        mat[1] = glm::vec4(r[1], 0);
-        mat[2] = glm::vec4(r[2], 0);
-        mat[3] = glm::vec4(pos, 1);
-        return mat;
-    }
-
-    inline glm::vec3 apply(const glm::vec3& p) const {
-        return (orientation * p) * scale + pos;
-    }
-
-    inline Transform inverse() const {
-        Transform result;
-        result.pos = glm::inverse(orientation) * ((-pos) / scale);
-        result.orientation = glm::inverse(orientation);
-        result.scale = 1.0f / scale;
-        return result;
-    }
 };
 
 class Instance {
