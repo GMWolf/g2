@@ -6,7 +6,7 @@
 #include <g2/core/Transform.h>
 #include <g2/ecs/query.h>
 #include <g2/ecs/view.h>
-
+#include <iostream>
 namespace g2 {
 
     ecs::id_t c_meshRender;
@@ -17,6 +17,7 @@ namespace g2 {
         c_camera = registry.registerComponent<Camera>();
     }
 
+    static bool printFrame = true;
 
     static void renderForCamera(gfx::Instance &gfx, ecs::Registry &ecs, Transform camera) {
         std::vector<g2::Transform> transforms;
@@ -25,6 +26,10 @@ namespace g2 {
         ecs::Query drawItemQuery;
         drawItemQuery.components = {c_transform, c_meshRender};
 
+        if (printFrame ) {
+            std::cout << "frame" << std::endl;
+        }
+
         for(auto chunk : ecs::query(ecs, drawItemQuery)) {
             for(auto[transform, meshRender] : ecs::ChunkView<Transform, MeshRender>(chunk, c_transform, c_meshRender)) {
 
@@ -32,8 +37,13 @@ namespace g2 {
                 drawItems.push_back(gfx::DrawItem {
                     .mesh = meshRender.meshIndex
                 });
+
+                if (printFrame)
+                    std::cout << "mesh: " << meshRender.meshIndex << std::endl;
             }
         }
+
+        printFrame = false;
 
         gfx.draw(drawItems, transforms, camera);
     }

@@ -18,8 +18,10 @@ namespace g2::ecs {
     static Archetype& getArchetype(Registry& registry, const Type& type) {
         Archetype* archetype = findArchetype(registry, type);
         if (!archetype) {
-            archetype= &registry.archetypes.emplace_back(Archetype{
-                .type = type
+            archetype = &registry.archetypes.emplace_back(Archetype{
+                .type = type,
+                .entities = {},
+                .chunks = {},
             });
         }
         return *archetype;
@@ -53,7 +55,7 @@ namespace g2::ecs {
         };
 
         for(int i = 0; i < type.components.size(); i++) {
-            auto* component = static_cast<Component*>(getComponent(registry, 0, 0, sizeof(Component)));
+            auto* component = static_cast<Component*>(getComponent(registry, type.components[i], 0, sizeof(Component)));
             size_t componentSize = component->size;
             chunk->components[i] = malloc(capacity * componentSize);
         }

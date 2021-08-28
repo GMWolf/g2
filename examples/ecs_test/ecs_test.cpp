@@ -24,15 +24,17 @@ int main() {
     auto pos = registry.registerComponent<Position>();
     auto vel = registry.registerComponent<Velocity>();
 
-    auto e = registry.create({pos, vel});
-    registry.get<Position>(e, pos) = {
-            .x = 0,
-            .y = 0,
-    };
-    registry.get<Velocity>(e, vel) = {
-            .x = 1,
-            .y = 2,
-    };
+    for(int i = 0; i < 20; i++) {
+        auto e = registry.create({pos, vel});
+        registry.get<Position>(e, pos) = {
+                .x = 0,
+                .y = 0,
+                };
+        registry.get<Velocity>(e, vel) = {
+                .x = 1,
+                .y = 2,
+                };
+    }
 
     Query q;
     q.components = {pos, vel};

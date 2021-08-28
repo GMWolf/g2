@@ -23,6 +23,7 @@
 
 #include "mesh_compiler.h"
 #include "material_compiler.h"
+#include "scene_compiler.h"
 
 namespace fs = std::filesystem;
 namespace fb = flatbuffers;
@@ -66,6 +67,10 @@ int main(int argc, char* argv[]) {
         archiveWriter.addEntry(matPath.c_str(), matData);
     }
 
+    {
+        auto scene = compileScene(data->nodes, data->nodes_count);
+        archiveWriter.addEntry("scene.scene", scene);
+    }
 
     auto archiveData = archiveWriter.finish();
     fs::create_directories(output.parent_path());
@@ -82,7 +87,6 @@ int main(int argc, char* argv[]) {
             ofs << " " << std::regex_replace((directory / buffer.uri).c_str(), whitespaceRegex, "\\$&");
         }
     }
-
 
 
     cgltf_free(data);

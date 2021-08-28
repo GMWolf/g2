@@ -30,6 +30,10 @@
       <file path="$PROJECT_DIR$/g2/platform/include" />
       <file path="$PROJECT_DIR$/g2/render/include" />
       <file path="$PROJECT_DIR$/g2/render/src" />
+      <file path="$PROJECT_DIR$/g2/scene/flatbufferschemas" />
+      <file path="$PROJECT_DIR$/g2/scene/gen" />
+      <file path="$PROJECT_DIR$/g2/scene/include" />
+      <file path="$PROJECT_DIR$/g2/scene/src" />
       <file path="$PROJECT_DIR$/g2/util/include" />
       <file path="$PROJECT_DIR$/g2/util/src" />
     </sourceRoots>

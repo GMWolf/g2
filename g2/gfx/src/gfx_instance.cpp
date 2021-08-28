@@ -38,7 +38,6 @@ namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
-
     struct DrawData {
         uint32_t baseIndex;
         uint32_t positionOffset;

@@ -1,0 +1,19 @@
+namespace g2;
+
+struct NodeTransform {
+    pos: [float:3];
+    scale: float;
+    rot: [float:4];
+}
+
+table Node {
+   transform: NodeTransform;
+   mesh: string;
+   name: string;
+}
+
+table Scene {
+    nodes : [Node];
+}
+
+root_type Scene;
