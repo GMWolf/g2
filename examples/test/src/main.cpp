@@ -29,7 +29,7 @@ int main() {
             .vkExtensions = g2::getVkExtensions(),
     };
 
-    auto gfx = g2::gfx::Instance(gfxConfig);
+    g2::gfx::Instance gfx(gfxConfig);
     
 
     g2::AssetRegistry assetRegistry;
@@ -48,7 +48,7 @@ int main() {
     std::vector<g2::gfx::DrawItem> drawItems {
             {.mesh = mesh},
             {.mesh = mesh2},
-            //{.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
+            {.mesh = assetRegistry.getAssetIndex("assets/Sponza/Sponza.gltf/sponza.g2mesh")},
             {.mesh = assetRegistry.getAssetIndex("assets/bistro/untitled.gltf/Mesh.1282.g2mesh")},
     };
 
@@ -119,6 +119,11 @@ int main() {
                     .pos = {0,0,0},
                     .scale = 0.02f,
                     .orientation = glm::quat(),
+                },
+                {
+                        .pos = {0,0,0},
+                        .scale = 0.02f,
+                        .orientation = glm::quat(),
                 }
         };
 

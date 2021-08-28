@@ -1,4 +1,4 @@
-add_executable(g2_test src/main.cpp)
+add_executable(g2_test src/main.cpp ../ecs_test/ecs_test.cpp)
 
 target_link_libraries(g2_test PRIVATE g2_platform g2_gfx g2_assets)
 

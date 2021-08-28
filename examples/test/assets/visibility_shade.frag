@@ -126,6 +126,11 @@ GradientInterpolationResults interpolateAttributeWithGradient(mat3x2 attributes,
     result.dx = attribute_x * pTwoOverRes.x;
     result.dy = attribute_y * pTwoOverRes.y;
     result.interp = (attribute_s + d.x * attribute_x + d.y * attribute_y);
+
+    result.dx.x = dot((db_dx * pTwoOverRes.x) * attr0, vec3(1));
+    result.dx.y = dot((db_dy * pTwoOverRes.y) * attr0, vec3(1));
+    result.dy.x = dot((db_dx * pTwoOverRes.x) * attr1, vec3(1));
+    result.dy.y = dot((db_dy * pTwoOverRes.y) * attr1, vec3(1));
     return result;
 }
 
@@ -251,9 +256,9 @@ void main() {
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
-    normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
-    normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
-    normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
+    //normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
+    //normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
+    //normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
 
     vec2 inUv0 = loadTexcoord(draw.texcoordOffset, index0);
     vec2 inUv1 = loadTexcoord(draw.texcoordOffset, index1);
@@ -272,14 +277,14 @@ void main() {
     vec2 uvdy = uvInterpolation.dy * w * mip;
     vec2 uv = uvInterpolation.interp * w;
 
-    vec3 uvix = InterpolateWithDeriv(baryDeriv, vec3(inUv0.x, inUv1.x, inUv2.x));
-    vec3 uviy = InterpolateWithDeriv(baryDeriv, vec3(inUv0.y, inUv1.y, inUv2.y));
-
-    uv.x = uvix.x;
-    uv.y = uviy.x;
-
-    uvdx = uvix.yz;
-    uvdy = uviy.yz;
+    //vec3 uvix = InterpolateWithDeriv(baryDeriv, vec3(inUv0.x, inUv1.x, inUv2.x));
+    //vec3 uviy = InterpolateWithDeriv(baryDeriv, vec3(inUv0.y, inUv1.y, inUv2.y));
+//
+    //uv.x = uvix.x;
+    //uv.y = uviy.x;
+//
+    //uvdx = uvix.yz;
+    //uvdy = uviy.yz;
 
     vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0), uvdx, uvdy);
 

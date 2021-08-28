@@ -11,6 +11,7 @@
 #include "swapchain.h"
 #include "validation.h"
 #include <cstring>
+#include <iostream>
 
 namespace g2::gfx {
 
@@ -172,7 +173,9 @@ std::optional<std::pair<VkDevice, QueueFamilyIndices>> createDevice(
 
 
   VkDevice device;
-  if(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
+  VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
+  if(result != VK_SUCCESS) {
+      std::cerr << result << "\n";
     return {};
   }
 
