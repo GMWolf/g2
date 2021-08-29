@@ -32,7 +32,7 @@ namespace g2 {
                             node->transform()->pos()->Get(1),
                             node->transform()->pos()->Get(2),
                     },
-                    .scale = node->transform()->scale() * 0.02,
+                    .scale = node->transform()->scale() * 0.02f,
                     .orientation = {
                             node->transform()->rot()->Get(3),
                             node->transform()->rot()->Get(0),

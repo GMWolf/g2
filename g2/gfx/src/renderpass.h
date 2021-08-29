@@ -10,6 +10,7 @@
 #include <optional>
 #include <glm/glm.hpp>
 #include <vk_mem_alloc.h>
+#include "render_context.h"
 
 namespace g2::gfx {
 
@@ -33,11 +34,14 @@ namespace g2::gfx {
         VkImageLayout layout;
     };
 
+    typedef void (*RenderPassCallback)(RenderContext* ctx);
+
     struct RenderPassInfo {
         const char* name;
         std::span<AttachmentInfo> colorAttachments;
         std::optional<AttachmentInfo> depthAttachment;
         std::span<ImageInputInfo> imageInputs;
+        RenderPassCallback callback;
     };
 
     struct RenderGraphInfo {
@@ -54,6 +58,7 @@ namespace g2::gfx {
     struct PassInfo {
         const char* name;
         VkRenderPassBeginInfo passBeginInfo;
+        RenderPassCallback callback;
     };
 
     struct ImageBinding {

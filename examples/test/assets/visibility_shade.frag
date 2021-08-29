@@ -300,7 +300,7 @@ void main() {
     }
 
     LightFragment light;
-    light.lightDirection = -normalize(vec3(-0.75, -3, 0.35));
+    light.lightDirection = -normalize(vec3(-0.75, 0.35, 3));
 
 
     vec4 shadowCoord = (shadowMat * vec4(position + normal * 0.1, 1.0));

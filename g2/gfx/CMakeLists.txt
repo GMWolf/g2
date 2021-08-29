@@ -35,7 +35,8 @@ add_library(g2_gfx
         src/forward_render_graph.h
         src/vb_render_graph.h
         src/culling.h
-        src/rendergraph_builder.h)
+        src/rendergraph_builder.h
+        src/render_context.h)
 
 target_sources(g2_gfx PRIVATE
         src/gfx_instance.cpp
@@ -43,4 +44,4 @@ target_sources(g2_gfx PRIVATE
 
 target_include_directories(g2_gfx PUBLIC include)
 target_link_libraries(g2_gfx PRIVATE vulkan vma g2_util libzstd_static)
-target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs g2_assets g2_core)
+target_link_libraries(g2_gfx PUBLIC g2_platform glm g2_gfx_fbs g2_assets g2_core g2_ecs)

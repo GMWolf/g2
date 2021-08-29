@@ -105,6 +105,7 @@ namespace g2::gfx {
         std::vector<VkFramebuffer> framebuffers;
         VkRect2D renderArea;
         std::vector<VkClearValue> clearValues;
+        RenderPassCallback callback;
     };
 
     struct RenderGraph {
@@ -392,6 +393,7 @@ namespace g2::gfx {
                              &passTransitions[index], &outPasses[index].renderPass);
 
             outPasses[index].name = renderPassInfo->name;
+            outPasses[index].callback = renderPassInfo->callback;
 
             bool isDisplayRenderBuffer =
                     std::find_if(renderPassInfo->colorAttachments.begin(), renderPassInfo->colorAttachments.end(),
@@ -446,6 +448,7 @@ namespace g2::gfx {
 
         for (int i = 0; i < passes.size(); i++) {
             outRenderPassInfo[i].name = passes[i].name.c_str();
+            outRenderPassInfo[i].callback = passes[i].callback;
             outRenderPassInfo[i].passBeginInfo = VkRenderPassBeginInfo{
                     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                     .renderPass = passes[i].renderPass,

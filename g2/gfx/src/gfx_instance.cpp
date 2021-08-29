@@ -38,13 +38,6 @@ namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    struct DrawData {
-        uint32_t baseIndex;
-        uint32_t positionOffset;
-        uint32_t normalOffset;
-        uint32_t texcoordOffset;
-        uint32_t materialId;
-    };
 
     struct UScene{
         glm::mat4 mat;
@@ -681,9 +674,10 @@ namespace g2::gfx {
         float aspect = pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height;
         auto proj = glm::perspective( fov, aspect, znear, zfar);
 
-        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, glm::normalize(glm::vec3(-0.75, -3, 0.35)));
-        //shadowMat  = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 100.0f) * glm::lookAt(glm::vec3(0, -4, 0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
+        glm::vec3 lightDir = glm::normalize(glm::vec3(-0.75, 0.35, 3));
 
+        glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, lightDir);
+        //shadowMat  = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 100.0f) * glm::lookAt(glm::vec3(0, -4, 0), glm::vec3(1, 0, 0), glm::vec3(0, -1, 0));
 
         *pImpl->sceneBufferMap[pImpl->currentFrame] = {
                 .mat = proj * view,
@@ -791,63 +785,22 @@ namespace g2::gfx {
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pImpl->descriptors.pipelineLayout,
                                     0, 2, descriptorSets, 0, nullptr);
 
-            if (strcmp(renderPassInfo.name, "visibility_debug") == 0) {
+            RenderContext ctx {
+                .cmd = cmd,
+                .drawItems = drawItems,
+                .transforms = transforms,
+                .camera = camera,
+                .meshManager = &pImpl->meshManager,
+                .cameraCullData = buildCameraCullData(camera, fov, aspect, znear, zfar),
+                .transformMap = pImpl->transformBufferMap[pImpl->currentFrame],
+                .drawDataMap = pImpl->drawDataMap[pImpl->currentFrame],
+                .pipelineLayout = pImpl->descriptors.pipelineLayout,
+                .indexBuffer = pImpl->meshBuffer.indexBuffer.buffer,
+                .maxMaterialId = pImpl->materialManager.nextMaterialId,
+            };
 
-                for(uint32_t matId = 0; matId < pImpl->materialManager.nextMaterialId; matId++) {
-
-                    vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
-                                       sizeof(uint32_t), &matId);
-                    vkCmdDraw(cmd, 3, 1, 0, 0);
-                }
-
-            } else if (strcmp(renderPassInfo.name, "materialDepth") == 0) {
-                vkCmdDraw(cmd, 3, 1, 0, 0);
-            } else {
-
-                vkCmdBindIndexBuffer(cmd, pImpl->meshBuffer.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-                if (!drawItems.empty()) {
-
-                    memcpy(pImpl->transformBufferMap[pImpl->currentFrame], transforms.data(), transforms.size_bytes());
-
-                    DrawData *drawData = pImpl->drawDataMap[pImpl->currentFrame];
-
-                    uint32_t drawIndex = 0;
-                    uint32_t itemIndex = 0;
-
-                    auto cc = buildCameraCullData(camera, fov, aspect, znear, zfar);
-
-                    for (DrawItem &item : drawItems) {
-                        Mesh mesh = pImpl->meshManager.meshes[item.mesh];
-                        for (Primitive &prim : mesh.primitives) {
-
-                            for(Meshlet& meshlet : prim.meshlets) {
-                                if (!meshletInView(cc, meshlet, transforms[itemIndex]))
-                                    continue;
-
-                                assert(drawIndex < pImpl->maxDrawCount);
-                                pImpl->transformBufferMap[pImpl->currentFrame][drawIndex] = transforms[itemIndex];
-
-                                drawData[drawIndex] = {
-                                        .baseIndex = static_cast<uint32_t>(prim.baseIndex + meshlet.triangleOffset),
-                                        .positionOffset = static_cast<uint32_t>(prim.positionOffset + meshlet.vertexOffset * 3),
-                                        .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset),
-                                        .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset + meshlet.vertexOffset),
-                                        .materialId = prim.material,
-                                };
-
-                                vkCmdPushConstants(cmd, pImpl->descriptors.pipelineLayout, VK_SHADER_STAGE_ALL, 0,
-                                                   sizeof(uint32_t), &drawIndex);
-                                vkCmdDrawIndexed(cmd, meshlet.triangleCount * 3, 1, prim.baseIndex + meshlet.triangleOffset, 0, 0);
-
-                                drawIndex++;
-                            }
-                        }
-                        itemIndex++;
-                    }
-                }
-
-            }
+            if (renderPassInfo.callback)
+                renderPassInfo.callback(&ctx);
 
             vkCmdEndRenderPass(cmd);
         }

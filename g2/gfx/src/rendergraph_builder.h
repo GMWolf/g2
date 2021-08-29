@@ -16,10 +16,11 @@ namespace g2::gfx {
     public:
         class PassBuilder {
             friend class RendergraphBuilder;
-            const char* name;
+            const char* name{};
             std::vector<AttachmentInfo> colorAttachments;
             std::optional<AttachmentInfo> depthAttachment;
             std::vector<ImageInputInfo> imageInputs;
+            RenderPassCallback callbackFunction = nullptr;
         public:
             PassBuilder& color(const AttachmentInfo& a) {
                 colorAttachments.push_back(a);
@@ -36,6 +37,11 @@ namespace g2::gfx {
                     .image = image,
                     .layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 });
+                return *this;
+            }
+
+            PassBuilder& callback(RenderPassCallback c) {
+                callbackFunction = c;
                 return *this;
             }
         };
@@ -66,6 +72,7 @@ namespace g2::gfx {
                     .colorAttachments = b.colorAttachments,
                     .depthAttachment = b.depthAttachment,
                     .imageInputs = b.imageInputs,
+                    .callback = b.callbackFunction,
                 });
             }
 

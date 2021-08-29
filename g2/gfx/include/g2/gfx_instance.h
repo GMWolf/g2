@@ -23,35 +23,36 @@ typedef VkPipeline_T* VkPipeline;
 
 namespace g2::gfx {
 
-void init();
+    void init();
 
-struct InstanceConfig {
-  Application *application;
-  std::span<const char *> vkExtensions;
-};
+    struct InstanceConfig {
+        Application *application;
+        std::span<const char *> vkExtensions;
+    };
 
-struct PipelineDef;
-struct MeshData;
+    struct PipelineDef;
+    struct MeshData;
 
-struct DrawItem {
-    uint32_t mesh;
-};
+    struct DrawItem {
+        uint32_t mesh;
+    };
 
-class Instance {
-  struct Impl;
-  std::unique_ptr<Impl> pImpl;
+    class Instance {
+        struct Impl;
+        std::unique_ptr<Impl> pImpl;
 
- public:
+    public:
+        explicit Instance(const InstanceConfig &config);
+        ~Instance();
 
-  explicit Instance(const InstanceConfig &config);
-  ~Instance();
+        std::span<IAssetManager*> getAssetManagers();
 
-  std::span<IAssetManager*> getAssetManagers();
+        void setFramebufferExtent(glm::ivec2 size);
 
-  void setFramebufferExtent(glm::ivec2 size);
+        void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms, Transform camera);
+    };
 
-  void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms, Transform camera);
-
-};
+    struct RenderContext;
+    void draw(RenderContext* ctx, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
 }  // namespace g2::gfx
 #endif  // G2_GFX_INSTANCE_H
