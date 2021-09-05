@@ -9,12 +9,14 @@
 #include <glm/gtc/packing.hpp>
 #include <glm/gtx/component_wise.hpp>
 #include <meshoptimizer.h>
+#include <iostream>
 
 namespace fb = flatbuffers;
 
 static const char* GLTF_ATTRIBUTE_POSITION = "POSITION";
 static const char* GLTF_ATTRIBUTE_NORMAL = "NORMAL";
 static const char* GLTF_ATTRIBUTE_TEXCOORD = "TEXCOORD_0";
+static const char* GLTF_ATTRIBUTE_TANGENT = "TANGENT";
 
 
 struct Meshlet {
@@ -56,6 +58,9 @@ fb::Offset<fb::Vector<uint8_t>> createByteVector(fb::FlatBufferBuilder& fbb, con
 }
 
 
+
+
+
 std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
     fb::FlatBufferBuilder fbb(1024);
@@ -95,7 +100,7 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             meshopt_Stream streams[]{
                     meshoptStream(positions),
                     meshoptStream(normals),
-                    meshoptStream(texcoords)
+                    meshoptStream(texcoords),
             };
 
             std::vector<uint32_t> remap(indices.size());
@@ -110,9 +115,49 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             texcoords.resize(remapVertexCount);
         }
 
+        std::vector<glm::vec3> tangents(positions.size(), glm::vec3(0));
+        std::vector<glm::vec3> bitangents(positions.size(), glm::vec3(0));
+
+        { //Compute tangents
+
+            //std::vector<uint32_t> tangentCounts(positions.size(), 0);
+
+            for(int i = 0; i < indices.size(); i+= 3) {
+                glm::vec3 v0 = positions[indices[i + 0]];
+                glm::vec3 v1 = positions[indices[i + 1]];
+                glm::vec3 v2 = positions[indices[i + 2]];
+
+                glm::vec2 uv0 = texcoords[indices[i + 0]];
+                glm::vec2 uv1 = texcoords[indices[i + 1]];
+                glm::vec2 uv2 = texcoords[indices[i + 2]];
+
+                glm::vec3 deltaPos1 = v1 - v0;
+                glm::vec3 deltaPos2 = v2 - v0;
+
+                glm::vec2 deltaUV1 = uv1 - uv0;
+                glm::vec2 deltaUV2 = uv2 - uv0;
+
+                float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+                glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+                glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
+
+
+                for(int t = 0; t < 3; t++) {
+                    tangents[indices[i + t]] += tangent;
+                    bitangents[indices[i + t]] += bitangent;
+                    //tangentCounts[indices[i + t]] += 1;
+                }
+            }
+
+            //for(int i = 0; i < tangents.size(); i++) {
+            //    tangents[i] /= (float)tangentCounts[i];
+            //    bitangents[i] /= (float)tangentCounts[i];
+            //    std::cout << tangents[i].x << std::endl;
+            //}
+        }
+
+
         meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), positions.size());
-
-
 
         const size_t maxVertices = 64;
         const size_t maxTriangles = 124;
@@ -144,11 +189,19 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             return glm::packSnorm<int16_t>(encode_oct(normals[vertex]));
         });
 
-
-
         std::vector<glm::u16vec2> packedTexcoords(meshletVertices.size());
         std::transform(meshletVertices.begin(), meshletVertices.end(), packedTexcoords.begin(), [&texcoords](uint32_t vertex) {
             return glm::packHalf(texcoords[vertex]);
+        });
+
+        std::vector<glm::vec3> packedTangents(meshletVertices.size());
+        std::transform(meshletVertices.begin(), meshletVertices.end(), packedTangents.begin(), [&tangents](uint32_t vertex) {
+            return tangents[vertex];
+        });
+
+        std::vector<glm::vec3> packedBitangents(meshletVertices.size());
+        std::transform(meshletVertices.begin(), meshletVertices.end(), packedBitangents.begin(), [&bitangents](uint32_t vertex) {
+            return bitangents[vertex];
         });
 
         std::vector<g2::gfx::MeshletData> meshletDataVec;
@@ -158,19 +211,21 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletVertices[meshlet.vertex_offset], &meshletTriangles[meshlet.triangle_offset],
                                                                  meshlet.triangle_count, &positions[0].x, positions.size(), sizeof(glm::vec3));
 
-            meshletDataVec.push_back(g2::gfx::MeshletData(
+            meshletDataVec.emplace_back(
                     g2::gfx::Vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
                     bounds.radius,
                     g2::gfx::Vec3(bounds.cone_apex[0], bounds.cone_apex[1], bounds.cone_apex[2]),
                     g2::gfx::Vec3(bounds.cone_axis[0], bounds.cone_axis[1], bounds.cone_axis[2]),
                     bounds.cone_cutoff,
-                    meshlet.triangle_offset, meshlet.triangle_count, meshlet.vertex_offset));
+                    meshlet.triangle_offset, meshlet.triangle_count, meshlet.vertex_offset);
         }
 
 
         auto fbPositions = createByteVector(fbb, packedPositions);
         auto fbNormals = createByteVector(fbb, packedNormals);
         auto fbTexcoords = createByteVector(fbb, packedTexcoords);
+        auto fbTangents = createByteVector(fbb, packedTangents);
+        auto fbBiTangents = createByteVector(fbb, packedBitangents);
 
         auto fbMeshlets = fbb.CreateVectorOfStructs(meshletDataVec);
 
@@ -178,11 +233,11 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
         auto fbIndices = fbb.CreateVector(packedIndices);
 
-        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, fbMeshlets, fbMaterialName));
+        fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, fbTangents, fbBiTangents, fbMeshlets, fbMaterialName));
     }
 
     auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);
     g2::gfx::FinishMeshDataBuffer(fbb, fbMesh);
 
-    return std::vector<uint8_t>(fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize());
+    return {fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize()};
 }

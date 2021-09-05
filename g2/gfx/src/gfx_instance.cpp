@@ -796,7 +796,7 @@ namespace g2::gfx {
                 .drawDataMap = pImpl->drawDataMap[pImpl->currentFrame],
                 .pipelineLayout = pImpl->descriptors.pipelineLayout,
                 .indexBuffer = pImpl->meshBuffer.indexBuffer.buffer,
-                .maxMaterialId = pImpl->materialManager.nextMaterialId,
+                .maxMaterialId = static_cast<uint32_t>(pImpl->materialManager.nextMaterialId),
             };
 
             if (renderPassInfo.callback)

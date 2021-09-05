@@ -16,6 +16,8 @@ namespace g2::gfx {
         uint32_t positionOffset;
         uint32_t normalOffset;
         uint32_t texcoordOffset;
+        uint32_t tangentOffset;
+        uint32_t bitangentOffset;
         uint32_t materialId;
     };
 

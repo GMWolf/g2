@@ -39,6 +39,22 @@ vec3 loadNormal(uint offset, uint index) {
     return oct_to_vec3(unpackSnorm2x16(vertexData[offset + index]));
 }
 
+vec3 loadTangent(uint offset, uint index) {
+    return vec3(
+        uintBitsToFloat(vertexData[offset + index * 3 + 0]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 1]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 2])
+    );
+}
+
+vec3 loadBiTangent(uint offset, uint index) {
+    return vec3(
+        uintBitsToFloat(vertexData[offset + index * 3 + 0]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 1]),
+        uintBitsToFloat(vertexData[offset + index * 3 + 2])
+    );
+}
+
 vec2 loadTexcoord(uint offset, uint index) {
     uint a = vertexData[offset + index];
     return unpackHalf2x16(a);

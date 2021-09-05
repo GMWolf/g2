@@ -35,6 +35,8 @@ struct Primitive {
   size_t positionOffset;
   size_t normalOffset;
   size_t texcoordOffset;
+  size_t tangentOffset;
+  size_t bitangentOffset;
   size_t baseIndex;
   uint32_t material;
 

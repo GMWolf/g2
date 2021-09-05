@@ -256,6 +256,29 @@ void main() {
 
     vec3 normal = normalize(interpolateAttribute(mat3(normal0, normal1, normal2), derivatives.db_dx, derivatives.db_dy, d) * w);
 
+    vec3 inTangent0 = loadTangent(draw.tangentOffset, index0);
+    vec3 inTangent1 = loadTangent(draw.tangentOffset, index1);
+    vec3 inTangent2 = loadTangent(draw.tangentOffset, index2);
+
+    vec3 tangent0 = rotate(inTangent0, transform.orientation) * invw[0];
+    vec3 tangent1 = rotate(inTangent1, transform.orientation) * invw[1];
+    vec3 tangent2 = rotate(inTangent2, transform.orientation) * invw[2];
+
+    vec3 tangent = normalize(interpolateAttribute(mat3(tangent0, tangent1, tangent2), derivatives.db_dx, derivatives.db_dy, d) * w);
+
+    vec3 inBiTangent0 = loadBiTangent(draw.bitangentOffset, index0);
+    vec3 inBiTangent1 = loadBiTangent(draw.bitangentOffset, index1);
+    vec3 inBiTangent2 = loadBiTangent(draw.bitangentOffset, index2);
+
+    vec3 bitangent0 = rotate(inBiTangent0, transform.orientation) * invw[0];
+    vec3 bitangent1 = rotate(inBiTangent1, transform.orientation) * invw[1];
+    vec3 bitangent2 = rotate(inBiTangent2, transform.orientation) * invw[2];
+
+    vec3 bitangent = normalize(interpolateAttribute(mat3(bitangent0, bitangent1, bitangent2), derivatives.db_dx, derivatives.db_dy, d) * w);
+
+    mat3 tbn = mat3(tangent, bitangent, normal);
+
+
     //normal.x = InterpolateWithDeriv(baryDeriv, vec3(normal0.x, normal1.x, normal2.x)).x;
     //normal.y = InterpolateWithDeriv(baryDeriv, vec3(normal0.y, normal1.y, normal2.y)).x;
     //normal.z = InterpolateWithDeriv(baryDeriv, vec3(normal0.z, normal1.z, normal2.z)).x;
@@ -294,9 +317,10 @@ void main() {
     pbr.roughness = sampleImage(material.metallicRoughness, uv, vec4(material.emissiveRoughnessFactor.a), uvdx, uvdy).g;
     pbr.emmisivity = sampleImage(material.emmisive, uv, vec4(material.emissiveRoughnessFactor.rgb, 1), uvdx, uvdy).rgb;
 
-    pbr.normal = normalize(normal);
+    pbr.normal = normal;
     if (material.normal != INVALID_IMAGE) {
-        pbr.normal = perturb_normal(pbr.normal, viewDir, uv, texture(textures[material.normal], uv).rgb);
+        //pbr.normal = perturb_normal(pbr.normal, viewDir, uv, texture(textures[material.normal], uv).rgb);
+        pbr.normal = normalize(tbn * (texture(textures[material.normal], uv).rgb * 2.0 - 1.0));
     }
 
     LightFragment light;
@@ -312,5 +336,4 @@ void main() {
     vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1), uvdx, uvdy).r;
 
     outColor = vec4(col + ambient, 1.0);
-    //outColor = vec4(albedoAlpha.rgb, 1.0);
 }

@@ -20,6 +20,8 @@ table MeshPrimitive {
     positionData: [ubyte];
     normalData: [ubyte];
     texcoordData: [ubyte];
+    tangentData: [ubyte];
+    bitangentData: [ubyte];
     meshlets: [MeshletData];
     material: string;
 }

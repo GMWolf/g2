@@ -71,6 +71,8 @@ namespace g2::gfx {
         auto positionOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->positionData());
         auto normalOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->normalData());
         auto texcoordOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->texcoordData());
+        auto tangentOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->tangentData());
+        auto bitangentOffset = uploadData(uploadQueue, meshBuffer->vertexBuffer, primitive->bitangentData());
 
         auto indexAlloc = allocateFromLinearBuffer(&meshBuffer->indexBuffer, primitive->indices()->size() * sizeof(uint32_t), 4);
         assert(indexAlloc.size);
@@ -105,6 +107,8 @@ namespace g2::gfx {
                 .positionOffset = positionOffset / sizeof(uint32_t),
                 .normalOffset = normalOffset / sizeof(uint32_t),
                 .texcoordOffset = texcoordOffset / sizeof(uint32_t),
+                .tangentOffset = tangentOffset / sizeof(uint32_t),
+                .bitangentOffset = bitangentOffset / sizeof(uint32_t),
                 .baseIndex = indexAlloc.offset / sizeof(uint32_t),
                 .material = 0,
                 .meshlets = std::move(meshlets),

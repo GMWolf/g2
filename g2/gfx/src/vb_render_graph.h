@@ -37,6 +37,8 @@ namespace g2::gfx {
                             .positionOffset = static_cast<uint32_t>(prim.positionOffset + meshlet.vertexOffset * 3),
                             .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset),
                             .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset + meshlet.vertexOffset),
+                            .tangentOffset = static_cast<uint32_t>(prim.tangentOffset + meshlet.vertexOffset * 3),
+                            .bitangentOffset = static_cast<uint32_t>(prim.bitangentOffset + meshlet.vertexOffset * 3),
                             .materialId = prim.material,
                             };
 

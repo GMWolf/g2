@@ -4,6 +4,8 @@ struct DrawData {
     uint positionOffset;
     uint normalOffset;
     uint texcoordOffset;
+    uint tangentOffset;
+    uint bitangentOffset;
     uint materialIndex;
 };
 
