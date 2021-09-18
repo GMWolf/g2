@@ -11,6 +11,44 @@
 
 namespace g2::gfx {
 
+    static void submitDrawItems_f(RenderContext* ctx) {
+        vkCmdBindIndexBuffer(ctx->cmd,ctx->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        uint32_t itemIndex = 0;
+        uint32_t drawIndex = 0;
+
+        for(DrawItem& item : ctx->drawItems) {
+            Mesh& mesh = ctx->meshManager->meshes[item.mesh];
+            for(Primitive& prim : mesh.primitives) {
+                for(Meshlet& meshlet : prim.meshlets) {
+                    if (!meshletInView(ctx->cameraCullData, meshlet, ctx->transforms[itemIndex]))
+                        continue;
+
+                    ctx->transformMap[drawIndex] = ctx->transforms[itemIndex];
+
+                    ctx->drawDataMap[drawIndex] = {
+                            .baseIndex = static_cast<uint32_t>(prim.baseIndex + meshlet.triangleOffset),
+                            .positionOffset = static_cast<uint32_t>(prim.positionOffset + meshlet.vertexOffset * 3),
+                            .normalOffset = static_cast<uint32_t>(prim.normalOffset + meshlet.vertexOffset),
+                            .texcoordOffset = static_cast<uint32_t>(prim.texcoordOffset + meshlet.vertexOffset),
+                            .tangentOffset = static_cast<uint32_t>(prim.tangentOffset + meshlet.vertexOffset * 3),
+                            .bitangentOffset = static_cast<uint32_t>(prim.bitangentOffset + meshlet.vertexOffset * 3),
+                            .materialId = prim.material,
+                    };
+
+                    vkCmdPushConstants(ctx->cmd, ctx->pipelineLayout, VK_SHADER_STAGE_ALL, 0,
+                                       sizeof(uint32_t), &drawIndex);
+                    vkCmdDrawIndexed(ctx->cmd, meshlet.triangleCount * 3, 1, prim.baseIndex + meshlet.triangleOffset, 0, 0);
+
+                    drawIndex++;
+                }
+            }
+
+            itemIndex++;
+        }
+
+    }
+
     static RenderGraph *createRenderGraph_forward(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews,
                                                   uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
@@ -70,12 +108,14 @@ namespace g2::gfx {
                         .colorAttachments = {},
                         .depthAttachment = shadowAttachment,
                         .imageInputs = {},
+                        .callback = submitDrawItems_f,
                 },
                 {
                         .name = "opaque",
                         .colorAttachments = colorAttachments,
                         .depthAttachment = depthAttachments,
                         .imageInputs = imageInputs,
+                        .callback = submitDrawItems_f,
                 }
         };
 

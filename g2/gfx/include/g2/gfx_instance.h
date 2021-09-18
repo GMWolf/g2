@@ -50,6 +50,8 @@ namespace g2::gfx {
         void setFramebufferExtent(glm::ivec2 size);
 
         void draw(std::span<DrawItem> drawItems, std::span<Transform> transforms, Transform camera);
+
+        void setScriptIndex(uint index);
     };
 
     struct RenderContext;

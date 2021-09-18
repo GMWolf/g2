@@ -38,6 +38,10 @@ namespace g2::gfx {
 
     static const int MAX_FRAMES_IN_FLIGHT = 2;
 
+    auto scripts = std::array{
+            createRenderGraph_forward,
+            createRenderGraph_vb,
+    };
 
     struct UScene{
         glm::mat4 mat;
@@ -102,6 +106,10 @@ namespace g2::gfx {
         std::vector<VkFence> imagesInFlight;
 
         size_t currentFrame = 0;
+
+        uint scriptIndex = 0;
+        uint previousScriptIndex = 0;
+
     };
 
 
@@ -173,8 +181,6 @@ namespace g2::gfx {
     }
 
     void init() {}
-
-
 
     static void updateRenderGraphDescriptors(VkDevice device, VkDescriptorSet descriptorSet, VkSampler sampler, const RenderGraph* graph) {
 
@@ -256,7 +262,7 @@ namespace g2::gfx {
 
         pImpl->swapChain = swapChain;
 
-        pImpl->renderGraph = createRenderGraph_vb(pImpl->vkDevice, pImpl->allocator, swapChain.imageViews,
+        pImpl->renderGraph = scripts[pImpl->scriptIndex](pImpl->vkDevice, pImpl->allocator, swapChain.imageViews,
                                                        swapChain.extent.width, swapChain.extent.height,
                                                        swapChain.format);
 
@@ -695,7 +701,7 @@ namespace g2::gfx {
                 &imageIndex);
 
 
-        if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR) {
+        if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR || pImpl->scriptIndex != pImpl->previousScriptIndex) {
             vkDeviceWaitIdle(pImpl->vkDevice);
 
             // We need to reset semaphore. simple way is to recreate it
@@ -717,13 +723,15 @@ namespace g2::gfx {
 
             destroyRenderGraph(pImpl->vkDevice, pImpl->allocator, pImpl->renderGraph);
 
-            pImpl->renderGraph = createRenderGraph_vb(pImpl->vkDevice, pImpl->allocator,
+            pImpl->renderGraph = scripts[pImpl->scriptIndex](pImpl->vkDevice, pImpl->allocator,
                                                            pImpl->swapChain.imageViews,
                                                            pImpl->swapChain.extent.width,
                                                            pImpl->swapChain.extent.height,
                                                            pImpl->swapChain.format);
 
             updateRenderGraphDescriptors(pImpl->vkDevice, pImpl->descriptors.resourceDescriptorSet, pImpl->shadowSampler, pImpl->renderGraph);
+
+            pImpl->previousScriptIndex = pImpl->scriptIndex;
 
             return;
         } else if (acquire != VK_SUCCESS) {
@@ -851,6 +859,10 @@ namespace g2::gfx {
 
     std::span<IAssetManager *> Instance::getAssetManagers() {
         return pImpl->assetManagers;
+    }
+
+    void Instance::setScriptIndex(uint index) {
+        pImpl->scriptIndex = index;
     }
 
 

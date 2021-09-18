@@ -333,7 +333,7 @@ void main() {
     light.radiance = vec3(8.0 * shadowIntensity(shadowCoord));
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
-    vec3 ambient =  pbr.albedo * vec3(0.09) * sampleImage(material.occlusion, uv, vec4(1), uvdx, uvdy).r;
+    vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1), uvdx, uvdy).r;
 
     outColor = vec4(col + ambient, 1.0);
 }

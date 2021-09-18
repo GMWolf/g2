@@ -15,6 +15,8 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec3 viewDir;
 layout(location = 3) in vec3 worldPos;
 layout(location = 4) in vec4 shadowCoord;
+layout(location = 5) in vec3 tangent;
+layout(location = 6) in vec3 bitangent;
 
 layout(set = 0, binding = 2)  uniform sampler2D textures[];
 layout(set = 0, binding = 4) uniform sampler2DShadow shadowMap;
@@ -76,7 +78,7 @@ void main() {
 
     vec4 albedoAlpha = sampleImage(material.albedo, uv, vec4(material.albedoMetallicFactor.rgb, 1.0));
 
-    if(albedoAlpha.a < 0.05) {
+    if(albedoAlpha.a < 0.5) {
         discard;
     }
 
@@ -88,17 +90,19 @@ void main() {
 
     pbr.normal = normalize(normal);
     if (material.normal != INVALID_IMAGE) {
-        pbr.normal = perturb_normal(pbr.normal, viewDir, uv, texture(textures[material.normal], uv).rgb);
+        //pbr.normal = perturb_normal(pbr.normal, viewDir, uv, texture(textures[material.normal], uv).rgb);
+        pbr.normal = normalize(mat3(normalize(tangent), normalize(bitangent), normalize(normal)) * (texture(textures[material.normal], uv).rgb * 2.0 - 1.0));
     }
 
     LightFragment light;
-    light.lightDirection = -normalize(vec3(-0.75, -3, 0.35));
+    light.lightDirection = -normalize(vec3(-0.75, 0.35, 3));
 
-    light.radiance = vec3(2.0 * shadowIntensity());//vec3(2.0);
+    light.radiance = vec3(8.0 * shadowIntensity());//vec3(2.0);
 
     vec3 col = pbrColor(pbr, light, normalize(viewDir));
     vec3 ambient =  pbr.albedo * vec3(0.05) * sampleImage(material.occlusion, uv, vec4(1)).r;
 
 
     outColor = vec4(col + ambient, 1.0);
+    //outColor.rgb = vec3(dot(pbr.normal, normalize(viewDir)) < 0 ? 1 : 0);
 }

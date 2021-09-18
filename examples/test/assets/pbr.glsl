@@ -60,7 +60,7 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
     float G = G_smith(f.normal, viewDirection, l.lightDirection, f.roughness);
     vec3 numerator = NDF * G * F;
 
-    float denom = 4.0 * max(dot(f.normal, viewDirection), 0.0) * max(dot(f.normal, l.lightDirection), 0.0);
+    float denom = 4.0 * max(dot(f.normal, viewDirection), 0.0) * max(dot(f.normal, l.lightDirection), 0.0) + 0.0001;
     vec3 specular = numerator / max(denom, 0.0001);
 
     vec3 kS = F;
@@ -72,7 +72,10 @@ vec3 pbrColor(PBRFragment f, LightFragment l, vec3 viewDirection) {
     vec3 c;
     c = (kD * f.albedo / PI + specular) * l.radiance * NdotL;
     c += f.emmisivity;
-    return c;
+
+    //return f.albedo * ( max(0.0, dot(f.normal, l.lightDirection)) + 0.02);
+
+    return c;//vec3(f.metalicity);
 }
 
     #endif //PBR

@@ -74,6 +74,13 @@ int main() {
         float dt = (float)time - lastTime;
         lastTime = time;
 
+        if (app.inputState.keyPressed(g2::KEYS::N_1)) {
+            gfx.setScriptIndex(0);
+        }
+        if (app.inputState.keyPressed(g2::KEYS::N_2)) {
+            gfx.setScriptIndex(1);
+        }
+
         updateCameras(ecs, app.inputState, dt);
 
         g2::render(gfx, ecs);

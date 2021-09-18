@@ -196,12 +196,12 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
         std::vector<glm::vec3> packedTangents(meshletVertices.size());
         std::transform(meshletVertices.begin(), meshletVertices.end(), packedTangents.begin(), [&tangents](uint32_t vertex) {
-            return tangents[vertex];
+            return glm::normalize(tangents[vertex]);
         });
 
         std::vector<glm::vec3> packedBitangents(meshletVertices.size());
         std::transform(meshletVertices.begin(), meshletVertices.end(), packedBitangents.begin(), [&bitangents](uint32_t vertex) {
-            return bitangents[vertex];
+            return glm::normalize(bitangents[vertex]);
         });
 
         std::vector<g2::gfx::MeshletData> meshletDataVec;

@@ -32,7 +32,7 @@ std::vector<uint8_t> compileMaterial(const cgltf_material *mat) {
         metallicRoughnessUri = (fs::path("..") / mat->pbr_metallic_roughness.metallic_roughness_texture.texture->image->uri).concat(".g2img");
         c_metallicRoughnessUri = metallicRoughnessUri.c_str();
     }
-    float metallicFactor = mat->pbr_metallic_roughness.metallic_factor;
+    float metallicFactor = 0.0; // mat->pbr_metallic_roughness.metallic_factor;
     float roughnessFactor = mat->pbr_metallic_roughness.roughness_factor;
 
 
