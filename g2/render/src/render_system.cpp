@@ -38,8 +38,6 @@ namespace g2 {
                     .mesh = meshRender.meshIndex
                 });
 
-                if (printFrame)
-                    std::cout << "mesh: " << meshRender.meshIndex << std::endl;
             }
         }
 

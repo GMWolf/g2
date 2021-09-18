@@ -23,8 +23,6 @@ namespace g2 {
         int i = 0;
         for(auto node : *sceneData->nodes()) {
 
-            std::cout << "creating a node" << std::endl;
-
             auto entity = registry->create({c_transform, c_meshRender});
             registry->get<g2::Transform>(entity, c_transform) = g2::Transform{
                     .pos = {

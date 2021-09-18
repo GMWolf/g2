@@ -392,7 +392,7 @@ namespace g2::gfx {
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .mipLodBias = 0.0f,
-            .anisotropyEnable = VK_FALSE, // TODO enable anisotropy
+            .anisotropyEnable = VK_TRUE,
             .maxAnisotropy = 8, // TODO query max anisotropy
             .minLod = 0,
             .maxLod = VK_LOD_CLAMP_NONE,
