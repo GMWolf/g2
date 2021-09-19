@@ -32,6 +32,8 @@ struct GlobalDescriptors {
     VkDescriptorSetLayout sceneDescriptorSetLayout;
     VkDescriptorPool sceneDescriptorPool;
     std::vector<VkDescriptorSet> sceneDescriptorSets;
+
+    VkDescriptorPool dynamicDescriptorPool;
 };
 
 GlobalDescriptors createGlobalDescriptors(VkDevice device, size_t frameCount);

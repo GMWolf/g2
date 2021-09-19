@@ -11,6 +11,8 @@
 
 #include <iostream>
 
+#include <imgui_impl_glfw.h>
+
 namespace g2 {
 
     struct Application::Impl {
@@ -93,6 +95,14 @@ namespace g2 {
 
     double Application::getTime() const{
         return glfwGetTime();
+    }
+
+    void Application::initImgui() {
+        ImGui_ImplGlfw_InitForVulkan(pImpl->window, true);
+    }
+
+    void Application::imguiNewFrame() {
+        ImGui_ImplGlfw_NewFrame();
     }
 
     std::span<const char *> getVkExtensions() {

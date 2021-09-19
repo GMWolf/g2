@@ -42,6 +42,9 @@ namespace g2 {
         glm::ivec2 getWindowSize();
 
         VkSurfaceKHR createSurface(VkInstance instance);
+
+        void initImgui();
+        void imguiNewFrame();
     };
 
     std::span<const char *> getVkExtensions();

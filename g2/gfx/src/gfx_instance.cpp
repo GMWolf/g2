@@ -28,6 +28,10 @@
 #include "effect.h"
 #include "culling.h"
 
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_glfw.h"
+
 #define SHADOWMAP_SIZE  2048
 
 #include "forward_render_graph.h"
@@ -392,7 +396,7 @@ namespace g2::gfx {
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .mipLodBias = 0.0f,
-            .anisotropyEnable = VK_TRUE,
+            .anisotropyEnable = VK_FALSE, // TODO anisotropy feature enable
             .maxAnisotropy = 8, // TODO query max anisotropy
             .minLod = 0,
             .maxLod = VK_LOD_CLAMP_NONE,
@@ -574,6 +578,89 @@ namespace g2::gfx {
         pImpl->uploadWorker = std::thread([&](){
             pImpl->uploadQueue.processJobs();
         });
+
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGui::StyleColorsDark();
+        config.application->initImgui();
+        ImGui_ImplVulkan_InitInfo imguiInfo = {};
+        imguiInfo.Instance = pImpl->vkInstance;
+        imguiInfo.PhysicalDevice = pImpl->physicalDevice;
+        imguiInfo.Device = pImpl->vkDevice;
+        imguiInfo.QueueFamily = *pImpl->queue_family_indices.graphics;
+        imguiInfo.Queue = pImpl->graphicsQueue;
+        imguiInfo.PipelineCache = VK_NULL_HANDLE;
+        imguiInfo.DescriptorPool = pImpl->descriptors.dynamicDescriptorPool;
+        imguiInfo.Allocator = nullptr;
+        imguiInfo.MinImageCount = 2;
+        imguiInfo.ImageCount = pImpl->swapChain.images.size();
+
+        VkRenderPass imguiRenderpass;
+        // Create the Render Pass
+        {
+            VkAttachmentDescription attachment = {};
+            attachment.format = pImpl->swapChain.format;
+            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            VkAttachmentReference color_attachment = {};
+            color_attachment.attachment = 0;
+            color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            VkSubpassDescription subpass = {};
+            subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+            subpass.colorAttachmentCount = 1;
+            subpass.pColorAttachments = &color_attachment;
+            VkSubpassDependency dependency = {};
+            dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+            dependency.dstSubpass = 0;
+            dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dependency.srcAccessMask = 0;
+            dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            VkRenderPassCreateInfo info = {};
+            info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+            info.attachmentCount = 1;
+            info.pAttachments = &attachment;
+            info.subpassCount = 1;
+            info.pSubpasses = &subpass;
+            info.dependencyCount = 1;
+            info.pDependencies = &dependency;
+            VkResult err = vkCreateRenderPass(pImpl->vkDevice, &info, nullptr, &imguiRenderpass);
+        }
+
+        ImGui_ImplVulkan_Init(&imguiInfo, imguiRenderpass);
+
+        // upload imgui fonts
+        {
+
+
+            // Use any command queue
+            VkCommandBuffer command_buffer = pImpl->commandBuffers[0];
+
+            vkResetCommandBuffer(command_buffer,  0);
+            VkCommandBufferBeginInfo begin_info = {};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(command_buffer, &begin_info);
+
+            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+            VkSubmitInfo end_info = {};
+            end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            end_info.commandBufferCount = 1;
+            end_info.pCommandBuffers = &command_buffer;
+            vkEndCommandBuffer(command_buffer);
+            vkQueueSubmit(pImpl->graphicsQueue, 1, &end_info, VK_NULL_HANDLE);
+
+            vkDeviceWaitIdle(pImpl->vkDevice);
+            ImGui_ImplVulkan_DestroyFontUploadObjects();
+        }
+
     }
 
     Instance::~Instance() {
@@ -739,6 +826,13 @@ namespace g2::gfx {
             return;
         }
 
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        ImGui::Render();
 
         VkCommandBuffer cmd = pImpl->commandBuffers[pImpl->currentFrame];
         vkResetCommandBuffer(cmd, 0);
@@ -770,15 +864,15 @@ namespace g2::gfx {
             };
 
             auto effect = pImpl->effectAssetManager.effects[0]; // TODO split visibility out of effect
-            auto findPass = [&effect](const char *name) -> Effect::Pass & {
-                return *std::find_if(effect.passes.begin(), effect.passes.end(), [&name](Effect::Pass pass) {
-                    return strcmp(pass.passId, name) == 0;
-                });
-            };
 
-            auto pass = findPass(renderPassInfo.name);
-            auto pipeline = pImpl->pipelineAssetManager.pipelines[pass.pipelineIndex];
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+            auto pass = std::find_if(effect.passes.begin(), effect.passes.end(), [&](Effect::Pass pass) {
+                return strcmp(pass.passId, renderPassInfo.name) == 0;
+            });
+            if (pass != effect.passes.end()) {
+                auto pipeline = pImpl->pipelineAssetManager.pipelines[pass->pipelineIndex];
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+            }
+
 
             vkCmdSetViewport(cmd, 0, 1, &viewport);
             vkCmdSetScissor(cmd, 0, 1, &scissor);

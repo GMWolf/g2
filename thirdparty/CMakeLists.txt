@@ -4,6 +4,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_USE_WAYLAND OFF CACHE BOOL "" FORCE)
 set(GLFW_VULKAN_STATIC OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+set(GLFW_DOCUMENT_INTERNALS OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw)
 
 add_subdirectory(glm)
@@ -53,3 +55,5 @@ add_subdirectory(zstd/build/cmake)
 target_compile_options(libzstd_static PRIVATE "-O3") #always optimize
 
 add_subdirectory(meshoptimizer)
+
+include(imgui.cmake)

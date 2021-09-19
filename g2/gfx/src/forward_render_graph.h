@@ -6,6 +6,7 @@
 #define G2_FORWARD_RENDER_GRAPH_H
 
 #include "renderpass.h"
+#include "imgui_impl_vulkan.h"
 
 
 
@@ -49,6 +50,11 @@ namespace g2::gfx {
 
     }
 
+    static void imgui_callback_f(RenderContext* ctx)
+    {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), ctx->cmd);
+    }
+
     static RenderGraph *createRenderGraph_forward(VkDevice device, VmaAllocator allocator, std::span<VkImageView> displayViews,
                                                   uint32_t displayWidth, uint32_t displayHeight, VkFormat displayFormat) {
 
@@ -70,6 +76,17 @@ namespace g2::gfx {
                 {   // Display attachment
                         .image = UINT32_MAX,
                         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                        .clearValue = {
+                                .color = {0.0f, 0.0f, 0.0f, 1.0f},
+                        },
+                },
+        };
+
+        AttachmentInfo guiColorAttachments[] = {
+                {   // Display attachment
+                        .image = UINT32_MAX,
+                        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                         .clearValue = {
                                 .color = {0.0f, 0.0f, 0.0f, 1.0f},
@@ -116,7 +133,14 @@ namespace g2::gfx {
                         .depthAttachment = depthAttachments,
                         .imageInputs = imageInputs,
                         .callback = submitDrawItems_f,
-                }
+                },
+                {
+                    .name = "imgui",
+                    .colorAttachments = guiColorAttachments,
+                    .depthAttachment = {},
+                    .imageInputs = {},
+                    .callback = imgui_callback_f,
+                },
         };
 
 

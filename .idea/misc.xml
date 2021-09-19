@@ -49,6 +49,7 @@
       <file path="$PROJECT_DIR$/thirdparty/glfw" />
       <file path="$PROJECT_DIR$/thirdparty/glm" />
       <file path="$PROJECT_DIR$/thirdparty/glslang" />
+      <file path="$PROJECT_DIR$/thirdparty/imgui" />
       <file path="$PROJECT_DIR$/thirdparty/meshoptimizer" />
       <file path="$PROJECT_DIR$/thirdparty/rapidjson" />
       <file path="$PROJECT_DIR$/thirdparty/shaderc" />
