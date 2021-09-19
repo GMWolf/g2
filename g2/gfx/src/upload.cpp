@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iostream>
 #include <cassert>
+#include <imgui.h>
 
 namespace g2::gfx {
 
@@ -14,6 +15,8 @@ namespace g2::gfx {
 
         size_t numBytes = source.getUncompressedDataSize();
         assert(numBytes <= stagingBufferSize);
+
+        uploadedBufferByteCount += numBytes;
 
 
         auto stagingAlloc = allocateFromLinearBuffer(&frames[frameIndex].stagingBuffer, numBytes, 1);
@@ -48,6 +51,8 @@ namespace g2::gfx {
 
         size_t numBytes = source.getUncompressedDataSize();
         assert(numBytes <= stagingBufferSize);
+
+        uploadedTextureByteCount += numBytes;
 
         auto stagingAlloc = allocateFromLinearBuffer(&frames[frameIndex].stagingBuffer, numBytes, 16);
         if (!stagingAlloc) {
@@ -311,6 +316,32 @@ namespace g2::gfx {
             vmaDestroyBuffer(allocator, uploadQueue->frames[i].stagingBuffer.buffer, uploadQueue->frames[i].stagingBuffer.allocation);
             vkDestroyFence(device, uploadQueue->frames[i].fence, nullptr);
         }
+    }
+
+    void showUploadQueueGui(UploadQueue *queue) {
+
+        ImGui::Begin("Upload Queue");
+
+        std::unique_lock<std::mutex> jlk(queue->jobQueueMutex);
+        ImGui::Text("Jobs: %d", queue->jobs.size());
+        jlk.unlock();
+
+        int bb = queue->uploadedBufferByteCount;
+        int tb = queue->uploadedTextureByteCount;
+        ImGui::Text("%d MB", (bb + tb) / 1000'000);
+        ImGui::Text("\t textures: %d MB", tb / 1000'000);
+        ImGui::Text("\t buffers: %d MB", bb / 1000'000);
+
+        std::unique_lock<std::mutex> flk(queue->freeQueueMutex);
+        if (queue->freeFrames.empty())
+        {
+            ImGui::Text("Starved");
+        }
+        flk.unlock();
+
+
+        ImGui::End();
+
     }
 
     size_t UploadSource::getUncompressedDataSize() const {

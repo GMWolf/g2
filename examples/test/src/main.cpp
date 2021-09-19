@@ -61,7 +61,7 @@ int main() {
             .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,0,1)),
     };
     ecs.get<FPSController>(camera, c_fpsController) = {
-            .movSpd = 2.5
+            .movSpd = 8
     };
 
     double lastTime = app.getTime();

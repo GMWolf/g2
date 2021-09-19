@@ -761,7 +761,7 @@ namespace g2::gfx {
                         UINT64_MAX);
 
         auto view = camera.inverse().matrix();
-        float zfar = 75;
+        float zfar = 125;
         float znear = 0.1f;
         float fov = glm::radians(60.0f);
         float aspect = pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height;
@@ -830,7 +830,7 @@ namespace g2::gfx {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::ShowDemoWindow();
+        showUploadQueueGui(&pImpl->uploadQueue);
 
         ImGui::Render();
 

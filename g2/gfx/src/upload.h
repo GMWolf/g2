@@ -53,7 +53,7 @@ namespace g2::gfx {
         std::priority_queue<UploadJob, std::vector<UploadJob>, UploadJobPriorityComparator> jobs;
 
         // Upload queue works in upload frames. They are separate frames to graphics frames
-        static const uint32_t uploadFrameCount = 4;
+        static const uint32_t uploadFrameCount = 3;
         static const size_t stagingBufferSize = 10 * 1024 * 1024;
 
         VkCommandPool commandPool;
@@ -81,6 +81,9 @@ namespace g2::gfx {
 
         int currentFrame = -1;
 
+        std::atomic<size_t> uploadedBufferByteCount = 0;
+        std::atomic<size_t> uploadedTextureByteCount = 0;
+
         //Called from client side
         void update(VkDevice device, VkQueue queue);
 
@@ -96,6 +99,8 @@ namespace g2::gfx {
 
     void createUploadQueue(VkDevice device, VmaAllocator allocator, uint32_t queueFamily, UploadQueue* uploadQueue);
     void destroyUploadQueue(VkDevice deive, VmaAllocator allocator, UploadQueue* uploadQueue);
+
+    void showUploadQueueGui(UploadQueue* queue);
 
 }
 
