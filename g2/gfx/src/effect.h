@@ -20,7 +20,10 @@ namespace g2::gfx {
         };
 
         std::vector<Pass> passes;
+
+        uint32_t getPipelineIndex(const char* name);
     };
+
 
 
     struct EffectAssetManager : public IAssetManager {

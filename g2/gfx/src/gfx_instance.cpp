@@ -863,15 +863,6 @@ namespace g2::gfx {
                     .extent = {renderPassInfo.passBeginInfo.renderArea.extent.width, renderPassInfo.passBeginInfo.renderArea.extent.height},
             };
 
-            auto effect = pImpl->effectAssetManager.effects[0]; // TODO split visibility out of effect
-
-            auto pass = std::find_if(effect.passes.begin(), effect.passes.end(), [&](Effect::Pass pass) {
-                return strcmp(pass.passId, renderPassInfo.name) == 0;
-            });
-            if (pass != effect.passes.end()) {
-                auto pipeline = pImpl->pipelineAssetManager.pipelines[pass->pipelineIndex];
-                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-            }
 
 
             vkCmdSetViewport(cmd, 0, 1, &viewport);
@@ -899,6 +890,8 @@ namespace g2::gfx {
                 .pipelineLayout = pImpl->descriptors.pipelineLayout,
                 .indexBuffer = pImpl->meshBuffer.indexBuffer.buffer,
                 .maxMaterialId = static_cast<uint32_t>(pImpl->materialManager.nextMaterialId),
+                .effect = &pImpl->effectAssetManager.effects[0],
+                .pipelines = pImpl->pipelineAssetManager.pipelines.data(),
             };
 
             if (renderPassInfo.callback)

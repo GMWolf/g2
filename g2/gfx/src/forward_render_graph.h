@@ -12,7 +12,7 @@
 
 namespace g2::gfx {
 
-    static void submitDrawItems_f(RenderContext* ctx) {
+    static void submitGeo(RenderContext* ctx) {
         vkCmdBindIndexBuffer(ctx->cmd,ctx->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         uint32_t itemIndex = 0;
@@ -47,7 +47,20 @@ namespace g2::gfx {
 
             itemIndex++;
         }
+    }
 
+    static void submitDrawItems_forward(RenderContext* ctx) {
+        auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("opaque")];
+        vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        submitGeo(ctx);
+    }
+
+    static void submitDrawItems_shadow(RenderContext* ctx) {
+        auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("shadow")];
+        vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        submitGeo(ctx);
     }
 
     static void imgui_callback_f(RenderContext* ctx)
@@ -125,14 +138,14 @@ namespace g2::gfx {
                         .colorAttachments = {},
                         .depthAttachment = shadowAttachment,
                         .imageInputs = {},
-                        .callback = submitDrawItems_f,
+                        .callback = submitDrawItems_shadow,
                 },
                 {
                         .name = "opaque",
                         .colorAttachments = colorAttachments,
                         .depthAttachment = depthAttachments,
                         .imageInputs = imageInputs,
-                        .callback = submitDrawItems_f,
+                        .callback = submitDrawItems_forward,
                 },
                 {
                     .name = "imgui",

@@ -8,6 +8,7 @@
 #include <g2/gfx_instance.h>
 #include "mesh.h"
 #include "culling.h"
+#include "effect.h"
 
 namespace g2::gfx {
 
@@ -33,6 +34,8 @@ namespace g2::gfx {
         VkPipelineLayout pipelineLayout;
         VkBuffer indexBuffer;
         uint32_t maxMaterialId;
+        Effect* effect;
+        VkPipeline* pipelines;
     };
 
 }

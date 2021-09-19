@@ -14,6 +14,8 @@
 namespace g2::gfx {
 
     static void materialDepth(RenderContext* ctx) {
+        auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("materialDepth")];
+        vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         vkCmdDraw(ctx->cmd, 3, 1, 0, 0);
     }
 
@@ -56,6 +58,10 @@ namespace g2::gfx {
     }
 
     static void submitMaterialShade(RenderContext* ctx) {
+
+        auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("visibility_debug")];
+        vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
         for(uint32_t matId = 0; matId < ctx->maxMaterialId; matId++) {
 
             vkCmdPushConstants(ctx->cmd, ctx->pipelineLayout, VK_SHADER_STAGE_ALL, 0,
@@ -77,7 +83,11 @@ namespace g2::gfx {
             });
 
         graph.pass("shadow")
-            .callback(submitDrawItems)
+            .callback([](RenderContext* ctx) {
+                auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("shadow")];
+                vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                submitDrawItems(ctx);
+            })
             .depth({
                 .image = shadowImage,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -99,7 +109,11 @@ namespace g2::gfx {
             });
 
         graph.pass("visibility")
-            .callback(submitDrawItems)
+                .callback([](RenderContext* ctx) {
+                    auto pipeline = ctx->pipelines[ctx->effect->getPipelineIndex("visibility")];
+                    vkCmdBindPipeline(ctx->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+                    submitDrawItems(ctx);
+                })
             .color({
                 .image = primitiveIdImage,
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,

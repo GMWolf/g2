@@ -39,3 +39,14 @@ g2::AssetAddResult g2::gfx::EffectAssetManager::add_asset(std::span<const char> 
 const char *g2::gfx::EffectAssetManager::ext() {
     return ".g2fx";
 }
+
+uint32_t g2::gfx::Effect::getPipelineIndex(const char *name) {
+
+    for(auto pass : passes) {
+        if (strcmp(name, pass.passId) == 0) {
+            return pass.pipelineIndex;
+        }
+    }
+
+    return 0;
+}
