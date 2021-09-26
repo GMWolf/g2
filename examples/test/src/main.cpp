@@ -7,9 +7,6 @@
 #include <g2/gfx_instance.h>
 #include <fstream>
 #include <vector>
-#include <g2/gfx/pipeline_generated.h>
-#include <g2/gfx/mesh_generated.h>
-#include <g2/gfx/material_generated.h>
 #include <g2/assets/asset_registry.h>
 #include <unistd.h>
 #include <g2/render/render.h>
@@ -56,12 +53,12 @@ int main() {
 
     g2::ecs::id_t camera = ecs.create({g2::c_transform, g2::c_camera, c_fpsController});
     ecs.get<g2::Transform>(camera, g2::c_transform) = {
-            .pos = {0, 0, -1},
+            .pos = {0, 0, 0},
             .scale = 1,
-            .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,0,1)),
+            .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,-1,0)),
     };
     ecs.get<FPSController>(camera, c_fpsController) = {
-            .movSpd = 8
+            .movSpd = 3
     };
 
     double lastTime = app.getTime();

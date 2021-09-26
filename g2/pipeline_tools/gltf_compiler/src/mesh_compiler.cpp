@@ -10,6 +10,7 @@
 #include <glm/gtx/component_wise.hpp>
 #include <meshoptimizer.h>
 #include <iostream>
+#include "sdf_compiler.h"
 
 namespace fb = flatbuffers;
 
@@ -67,6 +68,9 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
 
     std::vector<fb::Offset<g2::gfx::MeshPrimitive>> fbPrimitives;
 
+    glm::vec3 boundsMin(std::numeric_limits<float>::max());
+    glm::vec3 boundsMax(std::numeric_limits<float>::min());
+
     for(const cgltf_primitive& primitive : std::span(mesh->primitives, mesh->primitives_count)) {
         std::vector<uint32_t> indices(primitive.indices->count);
         std::vector<glm::vec3> positions(primitive.attributes[0].data->count);
@@ -83,6 +87,8 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
             if (strcmp(attribute.name, GLTF_ATTRIBUTE_POSITION) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
                     cgltf_accessor_read_float(attribute.data, vertexIndex, &positions[vertexIndex].x, 3);
+                    boundsMin = glm::min(boundsMin, positions[vertexIndex]);
+                    boundsMax = glm::max(boundsMax, positions[vertexIndex]);
                 }
             } else if (strcmp(attribute.name, GLTF_ATTRIBUTE_NORMAL) == 0) {
                 for(int vertexIndex = 0; vertexIndex < attribute.data->count; vertexIndex++) {
@@ -236,7 +242,20 @@ std::vector<uint8_t> compileMesh(const cgltf_mesh *mesh) {
         fbPrimitives.push_back(g2::gfx::CreateMeshPrimitive(fbb, fbIndices, fbPositions, fbNormals, fbTexcoords, fbTangents, fbBiTangents, fbMeshlets, fbMaterialName));
     }
 
-    auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives);
+    boundsMax += glm::vec3(1.0f);
+    boundsMin -= glm::vec3(1.0f);
+
+    float sdfRes = 0.2 / 0.02; //20 cm 0.02 scale;
+    glm::vec3 boundsSize = boundsMax - boundsMin;
+    std::cerr <<  mesh->name <<  "bounds size" << boundsSize.x << " " << boundsSize.y << " " << boundsSize.z << std::endl;
+    glm::ivec3 sdfSize = glm::ceil(boundsSize / sdfRes);
+    auto sdf = genSDF(mesh, sdfSize.x, sdfSize.y, sdfSize.z, sdfRes, boundsMin, 1);
+
+    auto fbSdfData = fbb.CreateVector(sdf);
+
+    auto fbSdf = g2::gfx::CreateSdfData(fbb, fbSdfData, sdfSize.x, sdfSize.y, sdfSize.z, boundsMin.x, boundsMin.y, boundsMin.z, boundsMax.x, boundsMax.y, boundsMax.z);
+
+    auto fbMesh = g2::gfx::CreateMeshDataDirect(fbb, &fbPrimitives, fbSdf);
     g2::gfx::FinishMeshDataBuffer(fbb, fbMesh);
 
     return {fbb.GetBufferPointer(), fbb.GetBufferPointer() + fbb.GetSize()};
