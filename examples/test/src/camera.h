@@ -19,22 +19,24 @@ id_t c_fpsController;
 void updateCameras(g2::ecs::Registry& ecs, g2::InputState input, float dt) {
 
     g2::ecs::Query q;
-    q.components = {g2::c_transform, c_fpsController};
+    q.components = {g2::c_transform, g2::c_camera};
 
     for(auto chunk : g2::ecs::query(ecs, q)) {
-        for(auto[transform, camera] : g2::ecs::ChunkView<g2::Transform, FPSController>(chunk, g2::c_transform, c_fpsController)) {
+        for(auto[transform] : g2::ecs::ChunkView<g2::Transform>(chunk, g2::c_transform)) {
+
+            float movSpd = 8;
 
             if (input.keyDown(g2::KEYS::W)) {
-                transform.pos += transform.orientation * glm::vec3(0,0,-1) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(0,0,-1) * dt * movSpd;
             }
             if (input.keyDown(g2::KEYS::S)) {
-                transform.pos += transform.orientation * glm::vec3(0,0,1) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(0,0,1) * dt * movSpd;
             }
             if (input.keyDown(g2::KEYS::A)) {
-                transform.pos += transform.orientation * glm::vec3(-1, 0, 0) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(-1, 0, 0) * dt * movSpd;
             }
             if (input.keyDown(g2::KEYS::D)) {
-                transform.pos += transform.orientation * glm::vec3(1, 0, 0) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(1, 0, 0) * dt * movSpd;
             }
             if (input.keyDown(g2::KEYS::E)) {
                 transform.orientation *= glm::quat(glm::vec3(0, -1, 0) * dt);
@@ -43,10 +45,10 @@ void updateCameras(g2::ecs::Registry& ecs, g2::InputState input, float dt) {
                 transform.orientation *= glm::quat(glm::vec3(0, 1, 0) * dt);
             }
             if (input.keyDown(g2::KEYS::SPACE)) {
-                transform.pos += transform.orientation * glm::vec3(0, -1, 0) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(0, 1, 0) * dt * movSpd;
             }
             if (input.keyDown(g2::KEYS::LEFT_CONTROL)) {
-                transform.pos += transform.orientation * glm::vec3(0, 1, 0) * dt * camera.movSpd;
+                transform.pos += transform.orientation * glm::vec3(0, -1, 0) * dt * movSpd;
             }
 
         }

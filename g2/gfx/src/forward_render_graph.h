@@ -22,8 +22,8 @@ namespace g2::gfx {
             Mesh& mesh = ctx->meshManager->meshes[item.mesh];
             for(Primitive& prim : mesh.primitives) {
                 for(Meshlet& meshlet : prim.meshlets) {
-                    if (!meshletInView(ctx->cameraCullData, meshlet, ctx->transforms[itemIndex]))
-                        continue;
+                    //if (!meshletInView(ctx->cameraCullData, meshlet, ctx->transforms[itemIndex]))
+                    //    continue;
 
                     ctx->transformMap[drawIndex] = ctx->transforms[itemIndex];
 

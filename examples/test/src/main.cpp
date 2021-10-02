@@ -50,17 +50,6 @@ int main() {
 
     assetRegistry.includePath("assets");
 
-
-    g2::ecs::id_t camera = ecs.create({g2::c_transform, g2::c_camera, c_fpsController});
-    ecs.get<g2::Transform>(camera, g2::c_transform) = {
-            .pos = {0, 0, 0},
-            .scale = 1,
-            .orientation = glm::quatLookAt(glm::vec3(1, 0, 0), glm::vec3(0,-1,0)),
-    };
-    ecs.get<FPSController>(camera, c_fpsController) = {
-            .movSpd = 3
-    };
-
     double lastTime = app.getTime();
 
     while (!app.shouldClose()) {

@@ -767,6 +767,7 @@ namespace g2::gfx {
         float aspect = pImpl->swapChain.extent.width / (float)pImpl->swapChain.extent.height;
         auto proj = glm::perspective( fov, aspect, znear, zfar);
 
+
         glm::vec3 lightDir = glm::normalize(glm::vec3(-0.75, 0.35, 3));
 
         glm::mat4 shadowMat = computeShadowMat(proj * view, zfar, lightDir);
@@ -852,9 +853,9 @@ namespace g2::gfx {
 
             VkViewport viewport {
                     .x = 0,
-                    .y = 0,
+                    .y = static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.height),
                     .width = static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.width),
-                    .height = static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.height),
+                    .height = -static_cast<float>(renderPassInfo.passBeginInfo.renderArea.extent.height),
                     .minDepth = 0.0f,
                     .maxDepth = 1.0f,
             };
